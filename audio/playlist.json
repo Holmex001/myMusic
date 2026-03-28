@@ -1,0 +1,11 @@
+﻿{
+    "tracks":  [
+                   {
+                       "title":  "1",
+                       "artist":  "Unknown Artist",
+                       "album":  "My Music",
+                       "src":  "./audio/tracks/1.mp3",
+                       "duration":  ""
+                   }
+               ]
+}

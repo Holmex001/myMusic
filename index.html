@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>My Music</title>
+    <meta
+      name="description"
+      content="A clean web music player for GitHub Pages."
+    />
+    <meta name="github-branch" content="main" />
+    <meta name="github-owner" content="" />
+    <meta name="github-repo" content="" />
+    <meta name="github-audio-path" content="audio/tracks" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Noto+Sans+SC:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="page-shell">
+      <header class="hero">
+        <div class="hero-copy">
+          <p class="eyebrow">GitHub Pages Music Player</p>
+          <h1>Play the audio files stored in your repository.</h1>
+          <p class="hero-text">
+            Put music files into <code>audio/tracks/</code>. When the site runs on
+            GitHub Pages, it can discover that folder automatically and build the
+            playlist without editing <code>audio/playlist.json</code>.
+          </p>
+        </div>
+        <div class="hero-orb" aria-hidden="true">
+          <span></span>
+          <span></span>
+          <span></span>
+        </div>
+      </header>
+
+      <main class="layout">
+        <section class="player-card">
+          <div class="player-top">
+            <div>
+              <p class="section-label">Now Playing</p>
+              <h2 id="track-title">Ready to load</h2>
+              <p id="track-artist" class="muted">Add audio files to audio/tracks</p>
+            </div>
+            <button id="theme-glow" class="ghost-chip" type="button">
+              Static Site
+            </button>
+          </div>
+
+          <div class="art-panel">
+            <div class="record">
+              <div class="record-inner"></div>
+            </div>
+            <div class="art-copy">
+              <p id="track-album" class="album-text">Playlist</p>
+              <div class="visualizer" aria-hidden="true">
+                <span></span>
+                <span></span>
+                <span></span>
+                <span></span>
+                <span></span>
+              </div>
+            </div>
+          </div>
+
+          <div class="timeline">
+            <label class="sr-only" for="seek-bar">Seek position</label>
+            <input id="seek-bar" type="range" min="0" max="100" value="0" />
+            <div class="time-row">
+              <span id="current-time">0:00</span>
+              <span id="total-time">0:00</span>
+            </div>
+          </div>
+
+          <div class="controls">
+            <button id="shuffle-button" class="ghost-button" type="button" aria-pressed="false">
+              Shuffle
+            </button>
+            <button id="prev-button" class="round-button" type="button" aria-label="Previous track">
+              &#9664;
+            </button>
+            <button id="play-button" class="play-button" type="button" aria-label="Play">
+              Play
+            </button>
+            <button id="next-button" class="round-button" type="button" aria-label="Next track">
+              &#9654;
+            </button>
+            <button id="repeat-button" class="ghost-button" type="button" aria-pressed="false">
+              Repeat
+            </button>
+          </div>
+
+          <div class="utility-row">
+            <label class="volume-wrap" for="volume-bar">
+              <span>Volume</span>
+              <input id="volume-bar" type="range" min="0" max="1" step="0.01" value="0.8" />
+            </label>
+            <button id="autoplay-button" class="ghost-chip" type="button" aria-pressed="false">
+              Autoplay off
+            </button>
+          </div>
+        </section>
+
+        <aside class="playlist-card">
+          <div class="playlist-head">
+            <div>
+              <p class="section-label">Queue</p>
+              <h2>Playlist</h2>
+            </div>
+            <span id="track-count" class="count-chip">0 tracks</span>
+          </div>
+          <p id="playlist-source" class="muted source-note">
+            Waiting for the audio source.
+          </p>
+          <div id="playlist-empty" class="empty-state" hidden>
+            <p>No playable audio files were found.</p>
+            <p>
+              Add files under <code>audio/tracks/</code>. On standard GitHub Pages
+              URLs, the site will discover them automatically after deployment.
+            </p>
+          </div>
+          <ol id="playlist" class="playlist" aria-label="Music playlist"></ol>
+        </aside>
+      </main>
+    </div>
+
+    <audio id="audio-player" preload="metadata"></audio>
+    <script src="./script.js" defer></script>
+  </body>
+</html>
