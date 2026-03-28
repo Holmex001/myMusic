@@ -3,7 +3,7 @@
   [string]$OutputFile = "audio/playlist.json"
 )
 
-$allowedExtensions = @(".mp3", ".wav", ".ogg", ".m4a", ".flac", ".aac")
+$allowedExtensions = @(".mp3", ".wav", ".ogg", ".m4a", ".flac", ".aac", ".mp4")
 
 if (-not (Test-Path $TracksDirectory)) {
   throw "Tracks directory not found: $TracksDirectory"
@@ -39,3 +39,4 @@ if ($directory -and -not (Test-Path $directory)) {
 
 $payload | ConvertTo-Json -Depth 4 | Set-Content -Path $OutputFile -Encoding UTF8
 Write-Host "Playlist generated: $OutputFile ($($tracks.Count) tracks)"
+

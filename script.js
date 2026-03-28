@@ -1,4 +1,4 @@
-const audio = document.querySelector("#audio-player");
+﻿const audio = document.querySelector("#audio-player");
 const playButton = document.querySelector("#play-button");
 const prevButton = document.querySelector("#prev-button");
 const nextButton = document.querySelector("#next-button");
@@ -19,7 +19,7 @@ const sourceNoteElement = document.querySelector("#playlist-source");
 const pageShell = document.querySelector(".page-shell");
 
 const AUDIO_FOLDER = "audio/tracks";
-const AUDIO_EXTENSIONS = new Set([".mp3", ".wav", ".ogg", ".m4a", ".flac", ".aac"]);
+const AUDIO_EXTENSIONS = new Set([".mp3", ".wav", ".ogg", ".m4a", ".flac", ".aac", ".mp4"]);
 
 let tracks = [];
 let currentIndex = 0;
@@ -408,3 +408,4 @@ audio.addEventListener("ended", () => {
 
 audio.volume = Number(volumeBar.value);
 loadPlaylist();
+

@@ -1,4 +1,4 @@
-# My Music
+﻿# My Music
 
 A static web music player designed for GitHub Pages.
 
@@ -6,7 +6,7 @@ A static web music player designed for GitHub Pages.
 
 Put audio files directly into `audio/tracks/`. On a normal GitHub Pages URL such as `https://username.github.io/repo/`, the player reads the repository folder through the GitHub API and builds the playlist automatically. You do not need to edit `audio/playlist.json` for deployed usage.
 
-Supported formats include `.mp3`, `.wav`, `.ogg`, `.m4a`, `.flac`, and `.aac`.
+Supported formats include `.mp3`, `.wav`, `.ogg`, `.m4a`, `.flac`, `.aac`, and `.mp4`.
 
 ## Local Preview
 
@@ -23,6 +23,22 @@ For local preview, the player can still fall back to `audio/playlist.json`. If y
 ```powershell
 ./scripts/build-playlist.ps1
 ```
+
+## Auto Push From Local Folder
+
+Start the watcher once:
+
+```powershell
+./scripts/watch-and-publish.ps1
+```
+
+or double-click `start-auto-publish.cmd`.
+
+After that, when you add, remove, or rename supported audio files in `audio/tracks/`, the script will automatically rebuild `audio/playlist.json`, run `git add`, create a commit, and push to GitHub.
+
+Keep that terminal window open while auto-publish is enabled.
+
+GitHub rejects files larger than 100 MB, so oversized tracks will be reported and skipped until you compress or replace them.
 
 ## Deploy to GitHub Pages
 

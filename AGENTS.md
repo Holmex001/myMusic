@@ -1,4 +1,4 @@
-# Repository Guidelines
+﻿# Repository Guidelines
 
 ## Project Structure & Module Organization
 This repository is a static GitHub Pages music player. Keep the layout simple and file-based:
@@ -9,6 +9,7 @@ This repository is a static GitHub Pages music player. Keep the layout simple an
 - `audio/tracks/` stores committed audio files
 - `audio/playlist.json` is an optional local fallback manifest
 - `scripts/build-playlist.ps1` rebuilds the fallback manifest from the audio folder
+- `scripts/watch-and-publish.ps1` watches `audio/tracks/` and auto-pushes audio updates
 
 Keep asset paths relative so the site works from the repository root on GitHub Pages.
 
@@ -16,6 +17,7 @@ Keep asset paths relative so the site works from the repository root on GitHub P
 There is no required build step. Use these commands during development:
 
 - `./scripts/build-playlist.ps1` scans `audio/tracks/` and regenerates the fallback `audio/playlist.json`
+- `./scripts/watch-and-publish.ps1` monitors `audio/tracks/` and pushes audio changes automatically
 - `python -m http.server 8080` serves the site locally at `http://localhost:8080`
 - `git diff` reviews final HTML, CSS, JS, and manifest changes
 
