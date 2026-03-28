@@ -11,6 +11,19 @@ $playlistScript = Join-Path $repoRoot "scripts/build-playlist.ps1"
 $allowedExtensions = @(".mp3", ".wav", ".ogg", ".m4a", ".flac", ".aac", ".mp4")
 $maxGitHubFileSizeBytes = 100MB
 
+function Invoke-Git {
+  param(
+    [Parameter(ValueFromRemainingArguments = $true)]
+    [string[]]$Arguments
+  )
+
+  & git '-c' "safe.directory=$repoRoot" @Arguments
+
+  if ($LASTEXITCODE -ne 0) {
+    throw "Git command failed: git $($Arguments -join ' ')"
+  }
+}
+
 function Get-TrackFiles {
   if (-not (Test-Path $tracksDirectory)) {
     return @()
@@ -53,18 +66,22 @@ function Invoke-Publish {
 
   & powershell -ExecutionPolicy Bypass -File $playlistScript
 
-  $status = git status --short -- audio/tracks audio/playlist.json
+  if ($LASTEXITCODE -ne 0) {
+    throw "Playlist generation failed."
+  }
+
+  $status = Invoke-Git status --short -- audio/tracks audio/playlist.json
 
   if (-not $status) {
     Write-Host "No tracked playlist changes detected."
     return
   }
 
-  git add audio/tracks audio/playlist.json
+  Invoke-Git add audio/tracks audio/playlist.json
 
   $commitMessage = "Update music library $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
-  git commit -m $commitMessage
-  git push
+  Invoke-Git commit -m $commitMessage
+  Invoke-Git push
 
   Write-Host "Publish complete."
 }
