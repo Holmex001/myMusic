@@ -6,6 +6,13 @@
                        "album":  "My Music",
                        "src":  "./audio/tracks/1.mp3",
                        "duration":  ""
+                   },
+                   {
+                       "title":  "Output",
+                       "artist":  "Unknown Artist",
+                       "album":  "My Music",
+                       "src":  "./audio/tracks/output.mp3",
+                       "duration":  ""
                    }
                ]
 }
