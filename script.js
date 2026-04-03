@@ -16,6 +16,12 @@ const playlistElement = document.querySelector("#playlist");
 const playlistEmptyElement = document.querySelector("#playlist-empty");
 const trackCountElement = document.querySelector("#track-count");
 const sourceNoteElement = document.querySelector("#playlist-source");
+const lyricsStatusElement = document.querySelector("#lyrics-status");
+const lyricsRoleElement = document.querySelector("#lyrics-role");
+const lyricsCurrentLineElement = document.querySelector("#lyrics-current-line");
+const lyricsSublineElement = document.querySelector("#lyrics-subline");
+const lyricsCountElement = document.querySelector("#lyrics-count");
+const lyricsListElement = document.querySelector("#lyrics-list");
 const pageShell = document.querySelector(".page-shell");
 
 const AUDIO_EXTENSIONS = new Set([".mp3", ".wav", ".ogg", ".m4a", ".flac", ".aac", ".mp4"]);
@@ -163,11 +169,7 @@ function normalizeSongPair(song) {
   const title = String(song?.title || "").trim();
   const original = song?.original ? createTrack(song.original, { role: "original", title, key: song.key }) : null;
   const cover = song?.cover ? createTrack(song.cover, { role: "cover", title, key: song.key }) : null;
-  const key =
-    getSongKey(song?.key) ||
-    original?.key ||
-    cover?.key ||
-    getSongKey(title);
+  const key = getSongKey(song?.key) || original?.key || cover?.key || getSongKey(title);
 
   if (!key || (!original && !cover)) {
     return null;
@@ -242,6 +244,62 @@ function getSongStatusText(song) {
   return "暂无可播放版本";
 }
 
+function getPlaceholderLyrics(selection) {
+  if (!selection) {
+    return {
+      status: "暂无歌词",
+      role: "等待播放",
+      currentLine: "请选择一首歌曲开始播放",
+      subline: "当前项目还没有接入逐行歌词文件，这里先展示当前歌曲和歌词占位信息。",
+      lines: [
+        "请选择一首歌曲开始播放",
+        "原唱与翻唱会共用同名歌曲的歌词区域",
+        "后续可继续接入 .lrc 或 JSON 歌词数据"
+      ]
+    };
+  }
+
+  const song = songs[selection.songIndex];
+  const currentTitle = song?.title || selection.track.title;
+
+  return {
+    status: song?.original && song?.cover ? "等待歌词接入" : "歌词待补充",
+    role: `${selection.track.roleLabel}版本`,
+    currentLine: currentTitle,
+    subline: `当前播放的是${selection.track.roleLabel}。后续接入歌词文件后，这里将显示实时高亮歌词。`,
+    lines: [
+      currentTitle,
+      `当前版本：${selection.track.roleLabel}`,
+      song ? getSongStatusText(song) : "暂无歌曲状态",
+      "暂未检测到对应歌词文件",
+      "可后续接入 .lrc 或 JSON 歌词数据"
+    ]
+  };
+}
+
+function renderLyricsPanel(selection) {
+  const lyricsData = getPlaceholderLyrics(selection);
+
+  lyricsStatusElement.textContent = lyricsData.status;
+  lyricsRoleElement.textContent = lyricsData.role;
+  lyricsCurrentLineElement.textContent = lyricsData.currentLine;
+  lyricsSublineElement.textContent = lyricsData.subline;
+  lyricsCountElement.textContent = `${lyricsData.lines.length} 行`;
+  lyricsListElement.innerHTML = "";
+
+  lyricsData.lines.forEach((line, index) => {
+    const item = document.createElement("li");
+    item.className = "lyrics-line";
+
+    if (index === 0) {
+      item.classList.add("active");
+    }
+
+    item.textContent = line;
+    lyricsListElement.appendChild(item);
+  });
+}
+
 function updateActiveTrack() {
   const slots = playlistElement.querySelectorAll(".pair-slot.available");
   const rows = playlistElement.querySelectorAll(".pair-item");
@@ -264,6 +322,7 @@ function updateTrackInfo(selection) {
     titleElement.textContent = "准备加载";
     artistElement.textContent = EMPTY_ARTIST_TEXT;
     albumElement.textContent = EMPTY_ALBUM_TEXT;
+    renderLyricsPanel(null);
     return;
   }
 
@@ -271,6 +330,7 @@ function updateTrackInfo(selection) {
   titleElement.textContent = selection.track.title;
   artistElement.textContent = `当前版本：${selection.track.roleLabel}`;
   albumElement.textContent = getSongStatusText(song);
+  renderLyricsPanel(selection);
 }
 
 function resolveSelection(songIndex, preferredRole = currentRole) {
@@ -681,4 +741,5 @@ audio.addEventListener("ended", () => {
 });
 
 audio.volume = Number(volumeBar.value);
+renderLyricsPanel(null);
 loadPlaylist();

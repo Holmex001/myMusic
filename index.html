@@ -6,7 +6,7 @@
     <title>我的音乐</title>
     <meta
       name="description"
-      content="一个部署在 GitHub Pages 上的静态网页音乐播放器。"
+      content="一个部署在 GitHub Pages 上的双版本音乐播放器，支持原唱与翻唱配对播放。"
     />
     <meta name="github-branch" content="main" />
     <meta name="github-owner" content="" />
@@ -30,8 +30,7 @@
           <p class="hero-text">
             把原唱放进 <code>audio/originals/</code>，把翻唱放进
             <code>audio/covers/</code>。同一首歌请使用相同文件名，页面会自动把两边配对，
-            并在 GitHub Pages 上直接生成双版本播放列表，无需手动编辑
-            <code>audio/playlist.json</code>。
+            并在 GitHub Pages 上直接生成双版本播放列表。
           </p>
         </div>
         <div class="hero-orb" aria-hidden="true">
@@ -136,6 +135,39 @@
           <ol id="playlist" class="pair-list" aria-label="原唱与翻唱配对列表"></ol>
         </aside>
       </main>
+
+      <section class="lyrics-card" aria-labelledby="lyrics-title">
+        <div class="lyrics-head">
+          <div>
+            <p class="section-label">歌词组件</p>
+            <h2 id="lyrics-title">歌词</h2>
+          </div>
+          <span id="lyrics-status" class="count-chip">暂无歌词</span>
+        </div>
+
+        <div class="lyrics-layout">
+          <section class="lyrics-display" aria-labelledby="lyrics-display-title">
+            <p class="section-label" id="lyrics-display-title">歌词显示器</p>
+            <p id="lyrics-role" class="lyrics-role">等待播放</p>
+            <h3 id="lyrics-current-line" class="lyrics-current-line">请选择一首歌曲开始播放</h3>
+            <p id="lyrics-subline" class="lyrics-subline">
+              当前项目还没有接入逐行歌词文件，这里先展示当前歌曲和歌词占位信息。
+            </p>
+          </section>
+
+          <aside class="lyrics-sheet" aria-labelledby="lyrics-sheet-title">
+            <div class="lyrics-sheet-head">
+              <p class="section-label" id="lyrics-sheet-title">歌词单</p>
+              <span id="lyrics-count" class="ghost-chip">0 行</span>
+            </div>
+            <ol id="lyrics-list" class="lyrics-list" aria-label="歌词列表">
+              <li class="lyrics-line active">请选择一首歌曲开始播放</li>
+              <li class="lyrics-line">原唱与翻唱会共用同名歌曲的歌词区域</li>
+              <li class="lyrics-line">后续可继续接入 .lrc 或 JSON 歌词数据</li>
+            </ol>
+          </aside>
+        </div>
+      </section>
     </div>
 
     <audio id="audio-player" preload="metadata"></audio>
