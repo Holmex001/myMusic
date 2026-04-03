@@ -68,6 +68,7 @@ The lyrics panel supports `.txt` lyric files.
 - Put lyric files in `lyrics/`
 - Use the same base filename as the song pair
 - Example: `audio/originals/泡沫.m4a`, `audio/covers/泡沫.mp3`, `lyrics/泡沫.txt`
+- Lyric `.txt` files are normalized to UTF-8 before commit and the hook will try to repair common UTF-8/GBK mojibake automatically
 
 Each non-empty line in the `.txt` file is rendered as one lyric line. The current implementation does not parse timestamps.
 
