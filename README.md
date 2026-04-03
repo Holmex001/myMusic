@@ -16,6 +16,7 @@ Use a two-tier workflow for sound quality and playback smoothness:
 - Put only web playback versions into `audio/originals/` and `audio/covers/`.
 - Use the same base filename for the same song on both sides so the player can pair them automatically.
 - Files in `audio-masters/originals/` are auto-converted to web playback originals before each commit.
+  Small web-friendly originals are preserved with `faststart`; larger originals are recompressed to a more suitable AAC bitrate for faster web playback.
 - Files in `audio-masters/covers/` are not auto-processed. If a cover file is too large, compress it yourself before placing it in `audio/covers/`.
 
 Recommended web playback formats:
@@ -50,7 +51,9 @@ For local preview, the player can still fall back to `audio/playlist.json`. If y
 
 The repository also installs a local git `pre-commit` hook that:
 
-- converts `audio-masters/originals/` into `audio/originals/` using AAC 256 kbps `.m4a`
+- converts `audio-masters/originals/` into `audio/originals/` using a size-aware strategy
+- preserves small `.m4a/.aac/.mp4` originals with `faststart`
+- recompresses larger originals to AAC in the `128-192 kbps` range to improve loading speed
 - rebuilds `audio/playlist.json`
 - stages the generated originals and playlist for the current commit
 

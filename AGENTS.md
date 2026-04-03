@@ -11,7 +11,7 @@ This repository is a static GitHub Pages music player. Keep the layout simple an
 - `audio-masters/` is an optional local-only folder for archival high-quality sources and should not be committed
 - `audio/playlist.json` is an optional local fallback manifest
 - `.githooks/pre-commit` auto-converts `audio-masters/originals/` into `audio/originals/` and regenerates `audio/playlist.json` before commit
-- `scripts/sync-originals.ps1` transcodes original masters into AAC 256 kbps `.m4a` web playback files
+- `scripts/sync-originals.ps1` uses size-aware conversion for original masters, preserving small web-friendly files and recompressing large ones for playback
 - `scripts/build-playlist.ps1` rebuilds the fallback manifest from the paired audio folders
 
 Keep asset paths relative so the site works from the repository root on GitHub Pages.
