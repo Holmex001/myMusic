@@ -20,8 +20,8 @@ const pageShell = document.querySelector(".page-shell");
 
 const AUDIO_FOLDER = "audio/tracks";
 const AUDIO_EXTENSIONS = new Set([".mp3", ".wav", ".ogg", ".m4a", ".flac", ".aac", ".mp4"]);
-const DEFAULT_ARTIST = "Unknown Artist";
-const DEFAULT_ALBUM = document.title.trim() || "My Music";
+const DEFAULT_ARTIST = "未知艺术家";
+const DEFAULT_ALBUM = document.title.trim() || "我的音乐";
 
 let tracks = [];
 let currentIndex = 0;
@@ -80,7 +80,7 @@ function filenameToTitle(filename) {
   const nameWithoutExtension = filename.replace(/\.[^.]+$/, "");
   const decodedName = safeDecodeURIComponent(nameWithoutExtension).replace(/[-_]+/g, " ").trim();
 
-  return decodedName.replace(/\b\w/g, (match) => match.toUpperCase()) || "Untitled Track";
+  return decodedName || "未命名曲目";
 }
 
 function getFilenameFromSource(src) {
@@ -157,9 +157,9 @@ function updateActiveTrack() {
 
 function updateTrackInfo(track) {
   if (!track) {
-    titleElement.textContent = "Ready to load";
-    artistElement.textContent = "Add audio files to audio/tracks";
-    albumElement.textContent = "Playlist";
+    titleElement.textContent = "准备加载";
+    artistElement.textContent = "请将音频文件放入 audio/tracks";
+    albumElement.textContent = "播放列表";
     return;
   }
 
@@ -205,14 +205,14 @@ function loadTrack(index, { autoplay = false } = {}) {
 
 function syncPlayState() {
   const isPlaying = !audio.paused && !audio.ended;
-  playButton.textContent = isPlaying ? "Pause" : "Play";
-  playButton.setAttribute("aria-label", isPlaying ? "Pause" : "Play");
+  playButton.textContent = isPlaying ? "暂停" : "播放";
+  playButton.setAttribute("aria-label", isPlaying ? "暂停" : "播放");
   pageShell.classList.toggle("is-playing", isPlaying);
 }
 
 function renderPlaylist() {
   playlistElement.innerHTML = "";
-  trackCountElement.textContent = `${tracks.length} tracks`;
+  trackCountElement.textContent = `${tracks.length} 首`;
   playlistEmptyElement.hidden = tracks.length > 0;
 
   tracks.forEach((track, index) => {
@@ -334,15 +334,15 @@ async function loadTracksFromManifest() {
 async function loadPlaylist() {
   try {
     tracks = await loadTracksFromGitHub();
-    updateSourceNote("Auto-loaded from the GitHub repository audio folder.");
+    updateSourceNote("已从 GitHub 仓库的音频目录自动加载。");
   } catch (githubError) {
     try {
       tracks = await loadTracksFromManifest();
-      updateSourceNote("Loaded from audio/playlist.json fallback.");
+      updateSourceNote("已从 audio/playlist.json 回退清单加载。");
     } catch (manifestError) {
       tracks = [];
       updateSourceNote(
-        "No tracks found. On GitHub Pages, files in audio/tracks are loaded automatically. On custom domains, set repository meta tags or keep the manifest fallback."
+        "未找到曲目。在 GitHub Pages 上，audio/tracks 中的文件会自动加载；如果使用自定义域名，请填写仓库 meta 标签或保留本地清单回退。"
       );
       console.error(githubError);
       console.error(manifestError);
@@ -400,7 +400,7 @@ repeatButton.addEventListener("click", () => {
 autoplayButton.addEventListener("click", () => {
   isAutoplayEnabled = !isAutoplayEnabled;
   autoplayButton.setAttribute("aria-pressed", String(isAutoplayEnabled));
-  autoplayButton.textContent = isAutoplayEnabled ? "Autoplay on" : "Autoplay off";
+  autoplayButton.textContent = isAutoplayEnabled ? "自动播放：开" : "自动播放：关";
 });
 
 seekBar.addEventListener("input", () => {

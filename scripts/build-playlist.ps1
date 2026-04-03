@@ -4,8 +4,8 @@
 )
 
 $allowedExtensions = @(".mp3", ".wav", ".ogg", ".m4a", ".flac", ".aac", ".mp4")
-$defaultArtist = "Unknown Artist"
-$defaultAlbum = "My Music"
+$defaultArtist = "未知艺术家"
+$defaultAlbum = "我的音乐"
 
 function Convert-ToTrackTitle {
   param(
@@ -17,7 +17,7 @@ function Convert-ToTrackTitle {
   $prettyTitle = ($decodedName -replace "[-_]+", " ").Trim()
 
   if ([string]::IsNullOrWhiteSpace($prettyTitle)) {
-    return "Untitled Track"
+    return "未命名曲目"
   }
 
   return (Get-Culture).TextInfo.ToTitleCase($prettyTitle)
