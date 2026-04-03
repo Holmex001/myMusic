@@ -24,22 +24,6 @@ For local preview, the player can still fall back to `audio/playlist.json`. If y
 ./scripts/build-playlist.ps1
 ```
 
-## Auto Push From Local Folder
-
-Start the watcher once:
-
-```powershell
-./scripts/watch-and-publish.ps1
-```
-
-or double-click `start-auto-publish.cmd`.
-
-After that, when you add, remove, or rename supported audio files in `audio/originals/` or `audio/covers/`, the script will automatically rebuild `audio/playlist.json`, run `git add`, create a commit, and push to GitHub.
-
-Keep that terminal window open while auto-publish is enabled.
-
-GitHub rejects files larger than 100 MB, so oversized tracks will be reported and skipped until you compress or replace them.
-
 ## Deploy to GitHub Pages
 
 1. Push this repository to GitHub.
@@ -48,7 +32,7 @@ GitHub rejects files larger than 100 MB, so oversized tracks will be reported an
 4. Select branch `main` and folder `/ (root)`.
 5. Wait for the site to publish.
 
-After that, adding or removing files in `audio/originals/` or `audio/covers/` and pushing the change is enough for the playlist to update on the live site.
+After that, adding or removing files in `audio/originals/` or `audio/covers/`, regenerating `audio/playlist.json` if you use the local fallback, and pushing the change yourself is enough for the playlist to update on the live site.
 
 ## Custom Domain Note
 
