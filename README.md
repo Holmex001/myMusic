@@ -8,6 +8,28 @@ Put original tracks into `audio/originals/` and cover tracks into `audio/covers/
 
 Supported formats include `.mp3`, `.wav`, `.ogg`, `.m4a`, `.flac`, `.aac`, and `.mp4`.
 
+## Audio Strategy
+
+Use a two-tier workflow for sound quality and playback smoothness:
+
+- Keep archival masters outside the web playback path in a local `audio-masters/` folder that is ignored by git.
+- Put only web playback versions into `audio/originals/` and `audio/covers/`.
+- Use the same base filename for the same song on both sides so the player can pair them automatically.
+
+Recommended web playback formats:
+
+- `AAC (.m4a) 256 kbps` for the best quality-to-size balance
+- `MP3 320 kbps` if you prefer maximum browser compatibility and simpler tooling
+
+Example FFmpeg commands:
+
+```powershell
+ffmpeg -i "audio-masters/originals/song.flac" -c:a aac -b:a 256k -movflags +faststart "audio/originals/song.m4a"
+ffmpeg -i "audio-masters/covers/song.wav" -c:a libmp3lame -b:a 320k "audio/covers/song.mp3"
+```
+
+`-movflags +faststart` is recommended for `.m4a` files so metadata is moved to the front of the file and web playback starts faster.
+
 ## Local Preview
 
 Serve the repository root with a static server:

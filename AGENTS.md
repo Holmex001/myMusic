@@ -8,6 +8,7 @@ This repository is a static GitHub Pages music player. Keep the layout simple an
 - `script.js` contains playlist loading and playback behavior
 - `audio/originals/` stores committed original tracks
 - `audio/covers/` stores committed cover tracks
+- `audio-masters/` is an optional local-only folder for archival high-quality sources and should not be committed
 - `audio/playlist.json` is an optional local fallback manifest
 - `scripts/build-playlist.ps1` rebuilds the fallback manifest from the paired audio folders
 
@@ -34,6 +35,7 @@ There is no automated test suite yet. Before opening a PR:
 
 - Run the site locally with a static server
 - Verify GitHub Pages auto-discovery after adding or renaming paired original/cover audio files
+- Keep archival masters out of the web playback folders and generate compressed web versions for deployment
 - If using local fallback, verify `audio/playlist.json` generation
 - Check playback, seek, next/previous, shuffle, repeat, and mobile layout manually
 

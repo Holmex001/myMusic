@@ -1,14 +1,20 @@
 ﻿{
     "songs":  [
                   {
-                      "key":  "泡沫-大张伟-2025.6.28",
-                      "title":  "泡沫 大张伟 2025.6.28",
-                      "original":  null,
+                      "key":  "泡沫",
+                      "title":  "泡沫",
+                      "original":  {
+                                       "title":  "泡沫",
+                                       "artist":  "Original",
+                                       "album":  "My Music",
+                                       "src":  "./audio/originals/%E6%B3%A1%E6%B2%AB.m4a",
+                                       "duration":  ""
+                                   },
                       "cover":  {
-                                    "title":  "泡沫 大张伟 2025.6.28",
+                                    "title":  "泡沫",
                                     "artist":  "Cover",
                                     "album":  "My Music",
-                                    "src":  "./audio/covers/%E6%B3%A1%E6%B2%AB-%E5%A4%A7%E5%BC%A0%E4%BC%9F-2025.6.28.mp3",
+                                    "src":  "./audio/covers/%E6%B3%A1%E6%B2%AB.mp3",
                                     "duration":  ""
                                 }
                   }
