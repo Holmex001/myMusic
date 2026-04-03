@@ -4,6 +4,33 @@
 )
 
 $allowedExtensions = @(".mp3", ".wav", ".ogg", ".m4a", ".flac", ".aac", ".mp4")
+$defaultArtist = "Unknown Artist"
+$defaultAlbum = "My Music"
+
+function Convert-ToTrackTitle {
+  param(
+    [string]$FileName
+  )
+
+  $baseName = [System.IO.Path]::GetFileNameWithoutExtension($FileName)
+  $decodedName = [System.Uri]::UnescapeDataString($baseName)
+  $prettyTitle = ($decodedName -replace "[-_]+", " ").Trim()
+
+  if ([string]::IsNullOrWhiteSpace($prettyTitle)) {
+    return "Untitled Track"
+  }
+
+  return (Get-Culture).TextInfo.ToTitleCase($prettyTitle)
+}
+
+function Convert-ToTrackSource {
+  param(
+    [string]$FileName
+  )
+
+  $encodedName = [System.Uri]::EscapeDataString($FileName)
+  return "./audio/tracks/$encodedName"
+}
 
 if (-not (Test-Path $TracksDirectory)) {
   throw "Tracks directory not found: $TracksDirectory"
@@ -14,14 +41,11 @@ $tracks = @(
     Where-Object { $allowedExtensions -contains $_.Extension.ToLowerInvariant() } |
     Sort-Object Name |
     ForEach-Object {
-      $baseName = [System.IO.Path]::GetFileNameWithoutExtension($_.Name)
-      $prettyTitle = ($baseName -replace "[-_]+", " ").Trim()
-
       [PSCustomObject]@{
-        title = (Get-Culture).TextInfo.ToTitleCase($prettyTitle)
-        artist = "Unknown Artist"
-        album = "My Music"
-        src = "./audio/tracks/$($_.Name)"
+        title = Convert-ToTrackTitle $_.Name
+        artist = $defaultArtist
+        album = $defaultAlbum
+        src = Convert-ToTrackSource $_.Name
         duration = ""
       }
     }

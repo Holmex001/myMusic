@@ -1,17 +1,10 @@
 ﻿{
     "tracks":  [
                    {
-                       "title":  "1",
+                       "title":  "泡沫 大张伟 2025.6.28",
                        "artist":  "Unknown Artist",
                        "album":  "My Music",
-                       "src":  "./audio/tracks/1.mp3",
-                       "duration":  ""
-                   },
-                   {
-                       "title":  "Output",
-                       "artist":  "Unknown Artist",
-                       "album":  "My Music",
-                       "src":  "./audio/tracks/output.mp3",
+                       "src":  "./audio/tracks/%E6%B3%A1%E6%B2%AB-%E5%A4%A7%E5%BC%A0%E4%BC%9F-2025.6.28.mp3",
                        "duration":  ""
                    }
                ]

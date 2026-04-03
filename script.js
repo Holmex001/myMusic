@@ -20,6 +20,8 @@ const pageShell = document.querySelector(".page-shell");
 
 const AUDIO_FOLDER = "audio/tracks";
 const AUDIO_EXTENSIONS = new Set([".mp3", ".wav", ".ogg", ".m4a", ".flac", ".aac", ".mp4"]);
+const DEFAULT_ARTIST = "Unknown Artist";
+const DEFAULT_ALBUM = document.title.trim() || "My Music";
 
 let tracks = [];
 let currentIndex = 0;
@@ -36,6 +38,14 @@ function formatTime(seconds) {
   const minutes = Math.floor(safeSeconds / 60);
   const remainingSeconds = String(safeSeconds % 60).padStart(2, "0");
   return `${minutes}:${remainingSeconds}`;
+}
+
+function safeDecodeURIComponent(value) {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return value;
+  }
 }
 
 function readMetaContent(name) {
@@ -68,9 +78,31 @@ function joinUrlParts(...parts) {
 
 function filenameToTitle(filename) {
   const nameWithoutExtension = filename.replace(/\.[^.]+$/, "");
-  const decodedName = decodeURIComponent(nameWithoutExtension).replace(/[-_]+/g, " ").trim();
+  const decodedName = safeDecodeURIComponent(nameWithoutExtension).replace(/[-_]+/g, " ").trim();
 
   return decodedName.replace(/\b\w/g, (match) => match.toUpperCase()) || "Untitled Track";
+}
+
+function getFilenameFromSource(src) {
+  const cleanSource = String(src || "").split(/[?#]/, 1)[0];
+  return cleanSource.split("/").filter(Boolean).pop() || "";
+}
+
+function normalizeTrack(track, fallback = {}) {
+  const source = String(track?.src || fallback.src || "");
+  const filename = fallback.filename || getFilenameFromSource(source);
+  const title = String(track?.title || fallback.title || filenameToTitle(filename)).trim();
+  const artist = String(track?.artist || fallback.artist || DEFAULT_ARTIST).trim();
+  const album = String(track?.album || fallback.album || DEFAULT_ALBUM).trim();
+  const duration = String(track?.duration || fallback.duration || "").trim();
+
+  return {
+    title: title || filenameToTitle(filename),
+    artist: artist || DEFAULT_ARTIST,
+    album: album || DEFAULT_ALBUM,
+    src: source,
+    duration
+  };
 }
 
 function getGitHubContext() {
@@ -124,9 +156,16 @@ function updateActiveTrack() {
 }
 
 function updateTrackInfo(track) {
-  titleElement.textContent = track?.title || "Ready to load";
-  artistElement.textContent = track?.artist || "Add audio files to audio/tracks";
-  albumElement.textContent = track?.album || "Playlist";
+  if (!track) {
+    titleElement.textContent = "Ready to load";
+    artistElement.textContent = "Add audio files to audio/tracks";
+    albumElement.textContent = "Playlist";
+    return;
+  }
+
+  titleElement.textContent = track.title;
+  artistElement.textContent = track.artist || DEFAULT_ARTIST;
+  albumElement.textContent = track.album || DEFAULT_ALBUM;
 }
 
 function loadTrack(index, { autoplay = false } = {}) {
@@ -191,7 +230,7 @@ function renderPlaylist() {
     meta.className = "track-meta";
     meta.innerHTML = `
       <strong>${track.title}</strong>
-      <span>${track.artist || "Unknown Artist"}</span>
+      <span>${track.artist || DEFAULT_ARTIST}</span>
     `;
 
     button.appendChild(meta);
@@ -270,13 +309,14 @@ async function loadTracksFromGitHub() {
     .map((item) => {
       const relativeSource = joinUrlParts(context.basePath, context.audioPath, encodeURIComponent(item.name));
 
-      return {
-        title: filenameToTitle(item.name),
-        artist: "GitHub Repository",
-        album: context.repo,
-        src: relativeSource,
-        duration: ""
-      };
+      return normalizeTrack(
+        {
+          src: relativeSource
+        },
+        {
+          filename: item.name
+        }
+      );
     });
 }
 
@@ -288,7 +328,7 @@ async function loadTracksFromManifest() {
   }
 
   const data = await response.json();
-  return Array.isArray(data.tracks) ? data.tracks : [];
+  return Array.isArray(data.tracks) ? data.tracks.map((track) => normalizeTrack(track)) : [];
 }
 
 async function loadPlaylist() {
