@@ -1,11 +1,26 @@
 param(
+  [string]$MastersOriginalsDirectory = "audio-masters/originals",
   [string]$OriginalsDirectory = "audio/originals",
   [string]$CoversDirectory = "audio/covers",
-  [string]$OutputFile = "audio/playlist.json"
+  [string]$OutputFile = "audio/playlist.json",
+  [switch]$SkipOriginalSync
 )
+
+$ErrorActionPreference = "Stop"
 
 $allowedExtensions = @(".mp3", ".wav", ".ogg", ".m4a", ".flac", ".aac", ".mp4")
 $defaultAlbum = "My Music"
+
+if (-not $SkipOriginalSync) {
+  $syncScript = Join-Path $PSScriptRoot "sync-originals.ps1"
+  & powershell -NoProfile -ExecutionPolicy Bypass -File $syncScript `
+    -MastersOriginalsDirectory $MastersOriginalsDirectory `
+    -WebOriginalsDirectory $OriginalsDirectory
+
+  if ($LASTEXITCODE -ne 0) {
+    throw "Original sync failed."
+  }
+}
 
 function Convert-ToTrackTitle {
   param(

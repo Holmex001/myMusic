@@ -15,6 +15,8 @@ Use a two-tier workflow for sound quality and playback smoothness:
 - Keep archival masters outside the web playback path in a local `audio-masters/` folder that is ignored by git.
 - Put only web playback versions into `audio/originals/` and `audio/covers/`.
 - Use the same base filename for the same song on both sides so the player can pair them automatically.
+- Files in `audio-masters/originals/` are auto-converted to web playback originals before each commit.
+- Files in `audio-masters/covers/` are not auto-processed. If a cover file is too large, compress it yourself before placing it in `audio/covers/`.
 
 Recommended web playback formats:
 
@@ -45,6 +47,14 @@ For local preview, the player can still fall back to `audio/playlist.json`. If y
 ```powershell
 ./scripts/build-playlist.ps1
 ```
+
+The repository also installs a local git `pre-commit` hook that:
+
+- converts `audio-masters/originals/` into `audio/originals/` using AAC 256 kbps `.m4a`
+- rebuilds `audio/playlist.json`
+- stages the generated originals and playlist for the current commit
+
+It does not auto-push. You still decide when to run `git commit` and `git push`.
 
 ## Deploy to GitHub Pages
 

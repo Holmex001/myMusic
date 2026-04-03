@@ -1,0 +1,12 @@
+#!/bin/sh
+
+repo_root="$(git rev-parse --show-toplevel)" || exit 1
+cd "$repo_root" || exit 1
+
+echo "Syncing original masters for web playback..."
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "scripts/sync-originals.ps1" || exit 1
+
+echo "Rebuilding playlist manifest..."
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "scripts/build-playlist.ps1" -SkipOriginalSync || exit 1
+
+git add -- "audio/originals" "audio/playlist.json"

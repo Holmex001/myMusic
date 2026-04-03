@@ -10,6 +10,8 @@ This repository is a static GitHub Pages music player. Keep the layout simple an
 - `audio/covers/` stores committed cover tracks
 - `audio-masters/` is an optional local-only folder for archival high-quality sources and should not be committed
 - `audio/playlist.json` is an optional local fallback manifest
+- `.githooks/pre-commit` auto-converts `audio-masters/originals/` into `audio/originals/` and regenerates `audio/playlist.json` before commit
+- `scripts/sync-originals.ps1` transcodes original masters into AAC 256 kbps `.m4a` web playback files
 - `scripts/build-playlist.ps1` rebuilds the fallback manifest from the paired audio folders
 
 Keep asset paths relative so the site works from the repository root on GitHub Pages.
@@ -36,6 +38,7 @@ There is no automated test suite yet. Before opening a PR:
 - Run the site locally with a static server
 - Verify GitHub Pages auto-discovery after adding or renaming paired original/cover audio files
 - Keep archival masters out of the web playback folders and generate compressed web versions for deployment
+- Keep original-master automation limited to `audio-masters/originals/`; covers are still managed manually
 - If using local fallback, verify `audio/playlist.json` generation
 - Check playback, seek, next/previous, shuffle, repeat, and mobile layout manually
 
