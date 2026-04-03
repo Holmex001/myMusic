@@ -375,33 +375,46 @@ input[type="range"] {
 .lyrics-display {
   display: flex;
   flex-direction: column;
-  justify-content: center;
   min-height: 320px;
   background:
     radial-gradient(circle at top left, rgba(217, 108, 63, 0.1), transparent 34%),
     linear-gradient(135deg, rgba(255, 255, 255, 0.82), rgba(255, 245, 236, 0.96));
 }
 
-.lyrics-role {
-  margin: 18px 0 10px;
-  color: var(--accent-strong);
-  font-size: 0.92rem;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
+.lyrics-display-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 18px;
+  flex-wrap: wrap;
 }
 
-.lyrics-current-line {
+.lyrics-display-head .section-label {
+  margin-bottom: 0;
+}
+
+.lyrics-text-view {
+  display: grid;
+  gap: 10px;
+  max-height: 420px;
+  overflow: auto;
+  padding-right: 6px;
+}
+
+.lyrics-paragraph {
   margin: 0;
-  max-width: 18ch;
-  font-size: clamp(2rem, 5vw, 3.8rem);
-  line-height: 1.05;
+  line-height: 1.9;
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 
-.lyrics-subline {
-  max-width: 44ch;
-  margin: 16px 0 0;
+.lyrics-paragraph.is-empty {
+  min-height: 1rem;
+}
+
+.lyrics-paragraph.is-placeholder {
   color: var(--muted);
-  line-height: 1.8;
 }
 
 .lyrics-sheet {
@@ -419,18 +432,54 @@ input[type="range"] {
   overflow: auto;
 }
 
-.lyrics-line {
-  padding: 14px 16px;
-  border-radius: 18px;
-  color: var(--muted);
-  background: rgba(255, 255, 255, 0.6);
-  border: 1px solid transparent;
+.lyrics-entry {
+  list-style: none;
 }
 
-.lyrics-line.active {
+.lyrics-entry-button,
+.lyrics-directory-empty {
+  width: 100%;
+  padding: 14px 16px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.6);
+}
+
+.lyrics-entry-button {
+  border: 1px solid transparent;
+  text-align: left;
   color: var(--text);
+  transition: transform 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+}
+
+.lyrics-entry-button:hover {
+  transform: translateY(-1px);
   border-color: rgba(217, 108, 63, 0.28);
+}
+
+.lyrics-entry-button.active {
+  border-color: rgba(217, 108, 63, 0.32);
   background: rgba(255, 244, 235, 0.98);
+}
+
+.lyrics-entry-title,
+.lyrics-entry-meta {
+  display: block;
+}
+
+.lyrics-entry-title {
+  margin-bottom: 4px;
+  font-size: 1rem;
+}
+
+.lyrics-entry-meta,
+.lyrics-directory-empty {
+  color: var(--muted);
+  font-size: 0.92rem;
+}
+
+.lyrics-directory-empty {
+  border: 1px solid transparent;
+  list-style: none;
 }
 
 .source-note {
@@ -704,5 +753,9 @@ input[type="range"] {
 
   .lyrics-display {
     min-height: 240px;
+  }
+
+  .lyrics-text-view {
+    max-height: none;
   }
 }

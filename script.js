@@ -18,9 +18,8 @@ const trackCountElement = document.querySelector("#track-count");
 const sourceNoteElement = document.querySelector("#playlist-source");
 const lyricsStatusElement = document.querySelector("#lyrics-status");
 const lyricsFollowButton = document.querySelector("#lyrics-follow-button");
-const lyricsRoleElement = document.querySelector("#lyrics-role");
-const lyricsCurrentLineElement = document.querySelector("#lyrics-current-line");
-const lyricsSublineElement = document.querySelector("#lyrics-subline");
+const lyricsDisplayTitleTextElement = document.querySelector("#lyrics-display-title-text");
+const lyricsDisplayTextElement = document.querySelector("#lyrics-display-text");
 const lyricsCountElement = document.querySelector("#lyrics-count");
 const lyricsListElement = document.querySelector("#lyrics-list");
 const pageShell = document.querySelector(".page-shell");
@@ -49,8 +48,9 @@ let currentRole = "cover";
 let isShuffleEnabled = false;
 let isRepeatEnabled = false;
 let isAutoplayEnabled = false;
+let lyricsEntries = [];
+let selectedLyricsKey = null;
 let lyricsRequestToken = 0;
-let lyricsSelection = null;
 
 function formatTime(seconds) {
   if (!Number.isFinite(seconds)) {
@@ -76,7 +76,7 @@ function readMetaContent(name) {
 }
 
 function encodePath(path) {
-  return path
+  return String(path || "")
     .split("/")
     .filter(Boolean)
     .map((segment) => encodeURIComponent(segment))
@@ -88,21 +88,19 @@ function joinUrlParts(...parts) {
     .filter(Boolean)
     .map((part, index) => {
       if (index === 0) {
-        return part.replace(/\/+$/g, "");
+        return String(part).replace(/\/+$/g, "");
       }
 
-      return part.replace(/^\/+|\/+$/g, "");
+      return String(part).replace(/^\/+|\/+$/g, "");
     })
     .filter(Boolean);
 
+  if (!cleaned.length) {
+    return "";
+  }
+
   const joined = cleaned.join("/");
   return joined.startsWith("/") ? joined : `/${joined}`;
-}
-
-function filenameToTitle(filename) {
-  const nameWithoutExtension = filename.replace(/\.[^.]+$/, "");
-  const decodedName = safeDecodeURIComponent(nameWithoutExtension).replace(/[-_]+/g, " ").trim();
-  return decodedName || "未命名曲目";
 }
 
 function getFilenameFromSource(src) {
@@ -110,12 +108,18 @@ function getFilenameFromSource(src) {
   return cleanSource.split("/").filter(Boolean).pop() || "";
 }
 
+function filenameToTitle(filename) {
+  const nameWithoutExtension = String(filename || "").replace(/\.[^.]+$/, "");
+  const decodedName = safeDecodeURIComponent(nameWithoutExtension).replace(/[-_]+/g, " ").trim();
+  return decodedName || "未命名曲目";
+}
+
 function getSongKey(value) {
   return String(value || "").trim().toLocaleLowerCase();
 }
 
 function getSongKeyFromFilename(filename) {
-  return getSongKey(safeDecodeURIComponent(filename.replace(/\.[^.]+$/, "")));
+  return getSongKey(safeDecodeURIComponent(String(filename || "").replace(/\.[^.]+$/, "")));
 }
 
 function getOtherRole(role) {
@@ -189,15 +193,6 @@ function normalizeSongPair(song) {
   };
 }
 
-function getLyricsContext() {
-  const githubContext = getGitHubContext();
-
-  return {
-    basePath: githubContext?.basePath || "",
-    lyricsPath: readMetaContent("github-lyrics-path") || githubContext?.lyricsPath || DEFAULT_LYRICS_PATH
-  };
-}
-
 function getGitHubContext() {
   const ownerOverride = readMetaContent("github-owner");
   const repoOverride = readMetaContent("github-repo");
@@ -242,8 +237,13 @@ function getGitHubContext() {
   };
 }
 
-function updateSourceNote(message) {
-  sourceNoteElement.textContent = message;
+function getLyricsContext() {
+  const githubContext = getGitHubContext();
+
+  return {
+    basePath: githubContext?.basePath || "",
+    lyricsPath: readMetaContent("github-lyrics-path") || githubContext?.lyricsPath || DEFAULT_LYRICS_PATH
+  };
 }
 
 function getSongStatusText(song) {
@@ -262,82 +262,94 @@ function getSongStatusText(song) {
   return "暂无可播放版本";
 }
 
-function getPlaceholderLyrics(selection) {
-  if (!selection) {
-    return {
-      status: "暂无歌词",
-      role: "等待播放",
-      currentLine: "请选择一首歌曲开始播放",
-      subline: "当前项目还没有接入逐行歌词文件，这里先展示当前歌曲和歌词占位信息。",
-      lines: [
-        "请选择一首歌曲开始播放",
-        "原唱与翻唱会共用同名歌曲的歌词区域",
-        "后续可继续接入 .lrc 或 JSON 歌词数据"
-      ]
-    };
-  }
-
-  const song = songs[selection.songIndex];
-  const currentTitle = song?.title || selection.track.title;
-
-  return {
-    status: song?.original && song?.cover ? "等待歌词接入" : "歌词待补充",
-    role: `${selection.track.roleLabel}版本`,
-    currentLine: currentTitle,
-    subline: `当前播放的是${selection.track.roleLabel}。后续接入歌词文件后，这里将显示实时高亮歌词。`,
-    lines: [
-      currentTitle,
-      `当前版本：${selection.track.roleLabel}`,
-      song ? getSongStatusText(song) : "暂无歌曲状态",
-      "暂未检测到对应歌词文件",
-      "可后续接入 .lrc 或 JSON 歌词数据"
-    ]
-  };
+function updateSourceNote(message) {
+  sourceNoteElement.textContent = message;
 }
 
-function renderLyricsPanelData(lyricsData) {
-  lyricsStatusElement.textContent = lyricsData.status;
-  lyricsRoleElement.textContent = lyricsData.role;
-  lyricsCurrentLineElement.textContent = lyricsData.currentLine;
-  lyricsSublineElement.textContent = lyricsData.subline;
-  lyricsCountElement.textContent = `${lyricsData.lines.length} 行`;
-  lyricsListElement.innerHTML = "";
+function renderLyricsMessage({ title, status, paragraphs }) {
+  lyricsDisplayTitleTextElement.textContent = title;
+  lyricsStatusElement.textContent = status;
+  lyricsDisplayTextElement.innerHTML = "";
 
-  lyricsData.lines.forEach((line, index) => {
-    const item = document.createElement("li");
-    item.className = "lyrics-line";
+  paragraphs.forEach((paragraph) => {
+    const element = document.createElement("p");
+    const isBlank = !paragraph.trim();
+    element.className = "lyrics-paragraph";
 
-    if (index === 0) {
-      item.classList.add("active");
+    if (isBlank) {
+      element.classList.add("is-empty");
+      element.textContent = " ";
+    } else {
+      element.textContent = paragraph;
     }
 
-    item.textContent = line;
-    lyricsListElement.appendChild(item);
+    lyricsDisplayTextElement.appendChild(element);
   });
 }
 
-function renderLyricsPanel(selection) {
-  lyricsSelection = selection;
-  renderLyricsPanelData(getPlaceholderLyrics(selection));
+function renderLyricsIntro() {
+  const hasLyrics = lyricsEntries.length > 0;
+
+  renderLyricsMessage({
+    title: "未选择歌词",
+    status: hasLyrics ? "请选择歌词" : "暂无歌词",
+    paragraphs: hasLyrics
+      ? ["左侧显示的是 TXT 歌词全文。", "请从右侧歌词单选择一份歌词，或点击“跳到当前歌词”。"]
+      : ["还没有检测到可用的歌词文件。", "将歌词放入 lyrics/ 并使用与歌曲相同的文件名，例如 lyrics/泡沫.txt。"]
+  });
 }
 
-function getLyricsStem(selection) {
-  const song = songs[selection.songIndex];
+function renderLyricsDirectoryLoading() {
+  lyricsCountElement.textContent = "0 份";
+  lyricsListElement.innerHTML = "";
 
-  return (
-    selection.track.basename ||
-    song?.original?.basename ||
-    song?.cover?.basename ||
-    song?.title ||
-    selection.track.title
-  );
+  const item = document.createElement("li");
+  item.className = "lyrics-directory-empty";
+  item.textContent = "正在加载歌词目录";
+  lyricsListElement.appendChild(item);
 }
 
-function parseLyricsText(text) {
-  return String(text || "")
-    .split(/\r?\n/)
-    .map((line) => line.replace(/^\uFEFF/, "").trim())
-    .filter(Boolean);
+function renderLyricsDirectory() {
+  lyricsListElement.innerHTML = "";
+  lyricsCountElement.textContent = `${lyricsEntries.length} 份`;
+
+  if (!lyricsEntries.length) {
+    const item = document.createElement("li");
+    item.className = "lyrics-directory-empty";
+    item.textContent = "未找到歌词文件";
+    lyricsListElement.appendChild(item);
+    return;
+  }
+
+  lyricsEntries.forEach((entry) => {
+    const item = document.createElement("li");
+    item.className = "lyrics-entry";
+
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "lyrics-entry-button";
+
+    if (entry.key === selectedLyricsKey) {
+      button.classList.add("active");
+      button.setAttribute("aria-current", "true");
+    }
+
+    button.addEventListener("click", () => {
+      void selectLyricsEntryByKey(entry.key);
+    });
+
+    const title = document.createElement("strong");
+    title.className = "lyrics-entry-title";
+    title.textContent = entry.title;
+
+    const meta = document.createElement("span");
+    meta.className = "lyrics-entry-meta";
+    meta.textContent = `TXT 歌词 · ${entry.filename}`;
+
+    button.append(title, meta);
+    item.appendChild(button);
+    lyricsListElement.appendChild(item);
+  });
 }
 
 function decodeLyricsBuffer(buffer) {
@@ -354,8 +366,7 @@ function decodeLyricsBuffer(buffer) {
   }
 }
 
-async function fetchLyricsText(selection) {
-  const stem = getLyricsStem(selection);
+async function fetchLyricsTextByStem(stem) {
   const { basePath, lyricsPath } = getLyricsContext();
   const lyricsUrl = joinUrlParts(basePath, lyricsPath, `${encodeURIComponent(stem)}.txt`);
   const response = await fetch(lyricsUrl, { cache: "no-store" });
@@ -368,45 +379,269 @@ async function fetchLyricsText(selection) {
   return decodeLyricsBuffer(buffer);
 }
 
-async function loadLyricsForSelection(selection) {
-  const requestToken = ++lyricsRequestToken;
-  lyricsSelection = selection;
-  const placeholder = getPlaceholderLyrics(selection);
-  const stem = getLyricsStem(selection);
+function createLyricsEntry({ stem, filename, text = null }) {
+  const resolvedFilename = filename || `${stem}.txt`;
+  const resolvedStem = stem || safeDecodeURIComponent(resolvedFilename.replace(/\.txt$/i, ""));
+  const title = safeDecodeURIComponent(resolvedStem).trim() || "未命名歌词";
+  const key = getSongKey(resolvedStem);
 
-  renderLyricsPanelData({
-    ...placeholder,
-    status: "正在加载歌词",
-    subline: `正在读取 lyrics/${stem}.txt`
+  return {
+    key,
+    stem: resolvedStem,
+    title,
+    filename: resolvedFilename,
+    text
+  };
+}
+
+function dedupeLyricsEntries(entries) {
+  const entryMap = new Map();
+
+  entries.forEach((entry) => {
+    if (!entry?.key) {
+      return;
+    }
+
+    const existing = entryMap.get(entry.key);
+
+    if (!existing) {
+      entryMap.set(entry.key, entry);
+      return;
+    }
+
+    if (!existing.text && entry.text) {
+      existing.text = entry.text;
+    }
+
+    if (!existing.filename && entry.filename) {
+      existing.filename = entry.filename;
+    }
+
+    if (!existing.stem && entry.stem) {
+      existing.stem = entry.stem;
+    }
   });
 
-  try {
-    const lyricsText = await fetchLyricsText(selection);
+  return [...entryMap.values()].sort((left, right) => left.title.localeCompare(right.title, "zh-CN"));
+}
 
-    if (requestToken !== lyricsRequestToken) {
-      return;
-    }
+function collectLyricsCandidateStems() {
+  const stemMap = new Map();
 
-    const lines = parseLyricsText(lyricsText);
+  songs.forEach((song) => {
+    [song.original?.basename, song.cover?.basename, song.title].forEach((candidate) => {
+      const stem = String(candidate || "").trim();
 
-    if (!lines.length) {
-      renderLyricsPanel(selection);
-      return;
-    }
+      if (!stem) {
+        return;
+      }
 
-    renderLyricsPanelData({
-      status: "TXT 歌词",
-      role: `${selection.track.roleLabel}版本`,
-      currentLine: lines[0],
-      subline: `已加载 lyrics/${stem}.txt，共 ${lines.length} 行`,
-      lines
+      const key = getSongKey(stem);
+
+      if (!stemMap.has(key)) {
+        stemMap.set(key, stem);
+      }
     });
-  } catch {
+  });
+
+  return [...stemMap.values()].sort((left, right) => left.localeCompare(right, "zh-CN"));
+}
+
+async function loadLyricsEntriesFromGitHub(context) {
+  const apiUrl = `https://api.github.com/repos/${context.owner}/${context.repo}/contents/${encodePath(
+    context.lyricsPath
+  )}?ref=${encodeURIComponent(context.branch)}`;
+  const response = await fetch(apiUrl, {
+    headers: {
+      Accept: "application/vnd.github+json"
+    }
+  });
+
+  if (response.status === 404) {
+    return [];
+  }
+
+  if (!response.ok) {
+    throw new Error(`GitHub lyrics request failed: ${response.status}`);
+  }
+
+  const items = await response.json();
+
+  if (!Array.isArray(items)) {
+    throw new Error("Unexpected GitHub lyrics payload.");
+  }
+
+  return items
+    .filter((item) => item.type === "file" && /\.txt$/i.test(item.name))
+    .map((item) =>
+      createLyricsEntry({
+        filename: item.name,
+        stem: safeDecodeURIComponent(item.name.replace(/\.txt$/i, ""))
+      })
+    )
+    .sort((left, right) => left.title.localeCompare(right.title, "zh-CN"));
+}
+
+async function loadLyricsEntriesByProbing() {
+  const candidates = collectLyricsCandidateStems();
+
+  if (!candidates.length) {
+    return [];
+  }
+
+  const results = await Promise.all(
+    candidates.map(async (stem) => {
+      try {
+        const text = await fetchLyricsTextByStem(stem);
+        return createLyricsEntry({ stem, text });
+      } catch {
+        return null;
+      }
+    })
+  );
+
+  return dedupeLyricsEntries(results.filter(Boolean));
+}
+
+async function loadLyricsDirectory() {
+  renderLyricsDirectoryLoading();
+
+  const githubContext = getGitHubContext();
+  let entries = [];
+
+  if (githubContext) {
+    try {
+      entries = await loadLyricsEntriesFromGitHub(githubContext);
+    } catch (error) {
+      console.error(error);
+    }
+  }
+
+  if (!entries.length) {
+    try {
+      entries = await loadLyricsEntriesByProbing();
+    } catch (error) {
+      console.error(error);
+    }
+  }
+
+  lyricsEntries = dedupeLyricsEntries(entries);
+
+  if (selectedLyricsKey && !lyricsEntries.some((entry) => entry.key === selectedLyricsKey)) {
+    selectedLyricsKey = null;
+  }
+
+  renderLyricsDirectory();
+
+  if (!selectedLyricsKey) {
+    renderLyricsIntro();
+  }
+}
+
+function renderLyricsLoading(entry) {
+  renderLyricsMessage({
+    title: entry.title,
+    status: "正在加载歌词",
+    paragraphs: [`正在读取 lyrics/${entry.filename}`, "请稍候。"]
+  });
+}
+
+function renderLyricsError(entry, message) {
+  renderLyricsMessage({
+    title: entry?.title || "未找到歌词",
+    status: "歌词不可用",
+    paragraphs: [message]
+  });
+}
+
+function renderLyricsText(entry, text) {
+  const lines = String(text || "")
+    .replace(/^\uFEFF/, "")
+    .split(/\r?\n/)
+    .map((line) => line.replace(/\r/g, ""));
+
+  renderLyricsMessage({
+    title: entry.title,
+    status: "TXT 歌词",
+    paragraphs: lines.length ? lines : ["歌词文件为空。"]
+  });
+}
+
+async function selectLyricsEntryByKey(key) {
+  const entry = lyricsEntries.find((item) => item.key === key);
+
+  if (!entry) {
+    return;
+  }
+
+  selectedLyricsKey = entry.key;
+  renderLyricsDirectory();
+
+  if (typeof entry.text === "string") {
+    renderLyricsText(entry, entry.text);
+    return;
+  }
+
+  renderLyricsLoading(entry);
+  const requestToken = ++lyricsRequestToken;
+
+  try {
+    const text = await fetchLyricsTextByStem(entry.stem);
+
     if (requestToken !== lyricsRequestToken) {
       return;
     }
 
-    renderLyricsPanel(selection);
+    entry.text = text;
+    renderLyricsText(entry, text);
+  } catch (error) {
+    if (requestToken !== lyricsRequestToken) {
+      return;
+    }
+
+    console.error(error);
+    renderLyricsError(entry, `未能读取 lyrics/${entry.filename}。`);
+  }
+}
+
+function getLyricsStemFromSelection(selection) {
+  const song = songs[selection.songIndex];
+
+  return (
+    selection.track.basename ||
+    song?.original?.basename ||
+    song?.cover?.basename ||
+    song?.title ||
+    selection.track.title
+  );
+}
+
+function findLyricsEntryForSelection(selection) {
+  const stem = getSongKey(getLyricsStemFromSelection(selection));
+  return lyricsEntries.find((entry) => entry.key === stem || getSongKey(entry.stem) === stem) || null;
+}
+
+async function ensureLyricsEntryForSelection(selection) {
+  const existingEntry = findLyricsEntryForSelection(selection);
+
+  if (existingEntry) {
+    return existingEntry;
+  }
+
+  const stem = getLyricsStemFromSelection(selection);
+
+  if (!stem) {
+    return null;
+  }
+
+  try {
+    const text = await fetchLyricsTextByStem(stem);
+    const entry = createLyricsEntry({ stem, text });
+    lyricsEntries = dedupeLyricsEntries([...lyricsEntries, entry]);
+    renderLyricsDirectory();
+    return lyricsEntries.find((item) => item.key === entry.key) || entry;
+  } catch {
+    return null;
   }
 }
 
@@ -439,21 +674,6 @@ function updateTrackInfo(selection) {
   titleElement.textContent = selection.track.title;
   artistElement.textContent = `当前版本：${selection.track.roleLabel}`;
   albumElement.textContent = getSongStatusText(song);
-
-  if (!lyricsSelection) {
-    renderLyricsPanelData({
-      status: "歌词待加载",
-      role: "点击按钮同步",
-      currentLine: "已定位到当前歌曲",
-      subline: `当前播放《${song.title}》，点击“跳到当前歌词”后读取 lyrics/${getLyricsStem(selection)}.txt`,
-      lines: [
-        `当前歌曲：${song.title}`,
-        `当前版本：${selection.track.roleLabel}`,
-        "歌词组件不会随切歌自动刷新",
-        "点击右上角按钮后才会跳到当前歌曲歌词"
-      ]
-    });
-  }
 }
 
 function resolveSelection(songIndex, preferredRole = currentRole) {
@@ -484,6 +704,13 @@ function resolveSelection(songIndex, preferredRole = currentRole) {
   return null;
 }
 
+function syncPlayState() {
+  const isPlaying = !audio.paused && !audio.ended;
+  playButton.textContent = isPlaying ? "暂停" : "播放";
+  playButton.setAttribute("aria-label", isPlaying ? "暂停" : "播放");
+  pageShell.classList.toggle("is-playing", isPlaying);
+}
+
 function loadSelection(songIndex, preferredRole, { autoplay = false } = {}) {
   if (!songs.length) {
     updateTrackInfo(null);
@@ -506,7 +733,7 @@ function loadSelection(songIndex, preferredRole, { autoplay = false } = {}) {
 
   updateTrackInfo(selection);
   currentTimeElement.textContent = "0:00";
-  totalTimeElement.textContent = selection.track.duration || "--:--";
+  totalTimeElement.textContent = selection.track.duration || "0:00";
   seekBar.value = 0;
   updateActiveTrack();
 
@@ -520,16 +747,10 @@ function loadSelection(songIndex, preferredRole, { autoplay = false } = {}) {
     .then(() => {
       syncPlayState();
     })
-    .catch(() => {
+    .catch((error) => {
+      console.error(error);
       syncPlayState();
     });
-}
-
-function syncPlayState() {
-  const isPlaying = !audio.paused && !audio.ended;
-  playButton.textContent = isPlaying ? "暂停" : "播放";
-  playButton.setAttribute("aria-label", isPlaying ? "暂停" : "播放");
-  pageShell.classList.toggle("is-playing", isPlaying);
 }
 
 function createSlot(songIndex, role, track) {
@@ -540,7 +761,7 @@ function createSlot(songIndex, role, track) {
   if (!track) {
     const placeholder = document.createElement("span");
     placeholder.className = "pair-slot missing";
-    placeholder.textContent = "待添加";
+    placeholder.textContent = "待补充";
     cell.appendChild(placeholder);
     return cell;
   }
@@ -562,7 +783,7 @@ function createSlot(songIndex, role, track) {
 
   const note = document.createElement("span");
   note.className = "pair-slot-note";
-  note.textContent = track.duration || "已就绪";
+  note.textContent = track.duration || `${track.roleLabel}已就绪`;
 
   button.append(action, note);
   cell.appendChild(button);
@@ -741,25 +962,47 @@ async function loadSongsFromManifest() {
 }
 
 async function loadPlaylist() {
-  try {
-    songs = await loadSongsFromGitHub();
-    updateSourceNote("已从 GitHub 仓库的原唱与翻唱目录自动加载。");
-  } catch (githubError) {
+  const githubContext = getGitHubContext();
+  const attempts = githubContext
+    ? [
+        {
+          load: loadSongsFromGitHub,
+          successMessage: "已从 GitHub 仓库中的原唱与翻唱目录自动加载。"
+        },
+        {
+          load: loadSongsFromManifest,
+          successMessage: "已从 audio/playlist.json 本地清单加载。"
+        }
+      ]
+    : [
+        {
+          load: loadSongsFromManifest,
+          successMessage: "已从 audio/playlist.json 本地清单加载。"
+        }
+      ];
+  const errors = [];
+
+  for (const attempt of attempts) {
     try {
-      songs = await loadSongsFromManifest();
-      updateSourceNote("已从 audio/playlist.json 本地配对清单加载。");
-    } catch (manifestError) {
-      songs = [];
-      updateSourceNote(
-        "未找到歌曲。请将原唱放入 audio/originals，将翻唱放入 audio/covers；使用自定义域名时，请填写仓库 meta 标签或保留本地清单回退。"
-      );
-      console.error(githubError);
-      console.error(manifestError);
+      songs = await attempt.load();
+      updateSourceNote(attempt.successMessage);
+      break;
+    } catch (error) {
+      errors.push(error);
     }
   }
 
+  if (!songs.length) {
+    updateSourceNote(
+      "未找到歌曲。请将原唱放入 audio/originals，将翻唱放入 audio/covers，并保持同名文件配对。"
+    );
+  }
+
+  errors.forEach((error) => console.error(error));
+
   renderPlaylist();
   loadSelection(0, "cover");
+  await loadLyricsDirectory();
 }
 
 playButton.addEventListener("click", async () => {
@@ -813,18 +1056,28 @@ repeatButton.addEventListener("click", () => {
 autoplayButton.addEventListener("click", () => {
   isAutoplayEnabled = !isAutoplayEnabled;
   autoplayButton.setAttribute("aria-pressed", String(isAutoplayEnabled));
-  autoplayButton.textContent = isAutoplayEnabled ? "自动切换：开" : "自动切换：关";
+  autoplayButton.textContent = isAutoplayEnabled ? "自动切歌：开" : "自动切歌：关";
 });
 
-lyricsFollowButton.addEventListener("click", () => {
+lyricsFollowButton.addEventListener("click", async () => {
   const selection = resolveSelection(currentSongIndex, currentRole);
 
   if (!selection) {
-    renderLyricsPanel(null);
+    renderLyricsIntro();
     return;
   }
 
-  void loadLyricsForSelection(selection);
+  const entry = await ensureLyricsEntryForSelection(selection);
+
+  if (!entry) {
+    renderLyricsError(
+      { title: selection.track.title },
+      `当前歌曲《${selection.track.title}》还没有对应的歌词文件。`
+    );
+    return;
+  }
+
+  await selectLyricsEntryByKey(entry.key);
 });
 
 seekBar.addEventListener("input", () => {
@@ -875,5 +1128,10 @@ audio.addEventListener("ended", () => {
 });
 
 audio.volume = Number(volumeBar.value);
-renderLyricsPanel(null);
+renderLyricsDirectoryLoading();
+renderLyricsMessage({
+  title: "未选择歌词",
+  status: "正在加载歌词目录",
+  paragraphs: ["左侧会显示 TXT 歌词的完整文本。", "请稍候，正在读取歌词目录。"]
+});
 loadPlaylist();

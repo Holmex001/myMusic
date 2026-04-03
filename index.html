@@ -27,11 +27,10 @@
       <header class="hero">
         <div class="hero-copy">
           <p class="eyebrow">GitHub Pages 音乐播放器</p>
-          <h1>把原唱和翻唱按同名文件成对播放。</h1>
+          <h1>把原唱和翻唱按同名文件成对播放</h1>
           <p class="hero-text">
-            把原唱放进 <code>audio/originals/</code>，把翻唱放进
-            <code>audio/covers/</code>。同一首歌请使用相同文件名，页面会自动把两边配对，
-            并在 GitHub Pages 上直接生成双版本播放列表。
+            把原唱放进 <code>audio/originals/</code>，把翻唱放进 <code>audio/covers/</code>。
+            同一首歌请使用相同的文件名，页面会自动把两边配对，并在 GitHub Pages 上直接生成双版本播放列表。
           </p>
         </div>
         <div class="hero-orb" aria-hidden="true">
@@ -51,9 +50,7 @@
                 请将原唱放入 audio/originals，将翻唱放入 audio/covers
               </p>
             </div>
-            <button id="theme-glow" class="ghost-chip" type="button">
-              双版本配对
-            </button>
+            <button id="theme-glow" class="ghost-chip" type="button">双版本配对</button>
           </div>
 
           <div class="art-panel">
@@ -105,7 +102,7 @@
               <input id="volume-bar" type="range" min="0" max="1" step="0.01" value="0.8" />
             </label>
             <button id="autoplay-button" class="ghost-chip" type="button" aria-pressed="false">
-              自动切换：关
+              自动切歌：关
             </button>
           </div>
         </section>
@@ -118,9 +115,7 @@
             </div>
             <span id="track-count" class="count-chip">0 组</span>
           </div>
-          <p id="playlist-source" class="muted source-note">
-            正在等待音频来源。
-          </p>
+          <p id="playlist-source" class="muted source-note">正在等待音频来源。</p>
           <div class="pair-grid-head" aria-hidden="true">
             <span>歌曲</span>
             <span>原唱</span>
@@ -130,7 +125,7 @@
             <p>没有找到可播放的配对歌曲。</p>
             <p>
               请把原唱放到 <code>audio/originals/</code>，把翻唱放到
-              <code>audio/covers/</code>。同一首歌请使用相同文件名，站点部署后会自动把它们配对。
+              <code>audio/covers/</code>。同一首歌请使用相同的文件名，站点部署后会自动把它们配对。
             </p>
           </div>
           <ol id="playlist" class="pair-list" aria-label="原唱与翻唱配对列表"></ol>
@@ -147,29 +142,31 @@
             <button id="lyrics-follow-button" class="ghost-chip" type="button">
               跳到当前歌词
             </button>
-            <span id="lyrics-status" class="count-chip">暂无歌词</span>
+            <span id="lyrics-status" class="count-chip">正在加载歌词目录</span>
           </div>
         </div>
 
         <div class="lyrics-layout">
           <section class="lyrics-display" aria-labelledby="lyrics-display-title">
-            <p class="section-label" id="lyrics-display-title">歌词显示器</p>
-            <p id="lyrics-role" class="lyrics-role">等待播放</p>
-            <h3 id="lyrics-current-line" class="lyrics-current-line">请选择一首歌曲开始播放</h3>
-            <p id="lyrics-subline" class="lyrics-subline">
-              当前项目还没有接入逐行歌词文件，这里先展示当前歌曲和歌词占位信息。
-            </p>
+            <div class="lyrics-display-head">
+              <p class="section-label" id="lyrics-display-title">歌词显示器</p>
+              <span id="lyrics-display-title-text" class="ghost-chip">未选择歌词</span>
+            </div>
+            <div id="lyrics-display-text" class="lyrics-text-view" aria-live="polite">
+              <p class="lyrics-paragraph is-placeholder">左侧会显示 TXT 歌词的完整文本。</p>
+              <p class="lyrics-paragraph is-placeholder">
+                请从右侧歌词单选择歌词，或点击“跳到当前歌词”快速定位。
+              </p>
+            </div>
           </section>
 
           <aside class="lyrics-sheet" aria-labelledby="lyrics-sheet-title">
             <div class="lyrics-sheet-head">
               <p class="section-label" id="lyrics-sheet-title">歌词单</p>
-              <span id="lyrics-count" class="ghost-chip">0 行</span>
+              <span id="lyrics-count" class="ghost-chip">0 份</span>
             </div>
-            <ol id="lyrics-list" class="lyrics-list" aria-label="歌词列表">
-              <li class="lyrics-line active">请选择一首歌曲开始播放</li>
-              <li class="lyrics-line">原唱与翻唱会共用同名歌曲的歌词区域</li>
-              <li class="lyrics-line">后续可继续接入 .lrc 或 JSON 歌词数据</li>
+            <ol id="lyrics-list" class="lyrics-list" aria-label="歌词目录">
+              <li class="lyrics-directory-empty">正在等待歌词目录</li>
             </ol>
           </aside>
         </div>
