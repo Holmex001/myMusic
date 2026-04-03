@@ -1,4 +1,4 @@
-﻿param(
+param(
   [int]$PollSeconds = 5,
   [int]$SettlingSeconds = 4
 )
@@ -6,10 +6,20 @@
 $ErrorActionPreference = "Stop"
 
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
-$tracksDirectory = Join-Path $repoRoot "audio/tracks"
+$originalsDirectory = Join-Path $repoRoot "audio/originals"
+$coversDirectory = Join-Path $repoRoot "audio/covers"
+$audioDirectories = @($originalsDirectory, $coversDirectory)
 $playlistScript = Join-Path $repoRoot "scripts/build-playlist.ps1"
 $allowedExtensions = @(".mp3", ".wav", ".ogg", ".m4a", ".flac", ".aac", ".mp4")
 $maxGitHubFileSizeBytes = 100MB
+
+function Ensure-AudioDirectories {
+  foreach ($directory in $audioDirectories) {
+    if (-not (Test-Path $directory)) {
+      New-Item -ItemType Directory -Path $directory | Out-Null
+    }
+  }
+}
 
 function Invoke-Git {
   param(
@@ -25,19 +35,23 @@ function Invoke-Git {
 }
 
 function Get-TrackFiles {
-  if (-not (Test-Path $tracksDirectory)) {
-    return @()
-  }
+  return @(
+    foreach ($directory in $audioDirectories) {
+      if (-not (Test-Path $directory)) {
+        continue
+      }
 
-  return @(Get-ChildItem -Path $tracksDirectory -File |
-    Where-Object { $allowedExtensions -contains $_.Extension.ToLowerInvariant() })
+      Get-ChildItem -Path $directory -File |
+        Where-Object { $allowedExtensions -contains $_.Extension.ToLowerInvariant() }
+    }
+  )
 }
 
 function Get-TrackSnapshot {
   $entries = Get-TrackFiles |
-    Sort-Object Name |
+    Sort-Object FullName |
     ForEach-Object {
-      "{0}|{1}|{2}" -f $_.Name, $_.Length, $_.LastWriteTimeUtc.Ticks
+      "{0}|{1}|{2}" -f $_.FullName, $_.Length, $_.LastWriteTimeUtc.Ticks
     }
 
   return ($entries -join "`n")
@@ -62,7 +76,7 @@ function Invoke-Publish {
   }
 
   Write-Host ""
-  Write-Host "Detected audio library change. Rebuilding playlist and pushing..."
+  Write-Host "Detected audio library change. Rebuilding paired playlist and pushing..."
 
   & powershell -ExecutionPolicy Bypass -File $playlistScript
 
@@ -70,29 +84,28 @@ function Invoke-Publish {
     throw "Playlist generation failed."
   }
 
-  $status = Invoke-Git status --short -- audio/tracks audio/playlist.json
+  $status = Invoke-Git status --short -- audio/originals audio/covers audio/playlist.json
 
   if (-not $status) {
     Write-Host "No tracked playlist changes detected."
     return
   }
 
-  Invoke-Git add audio/tracks audio/playlist.json
+  Invoke-Git add audio/originals audio/covers audio/playlist.json
 
-  $commitMessage = "Update music library $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
+  $commitMessage = "Update paired music library $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
   Invoke-Git commit -m $commitMessage
   Invoke-Git push
 
   Write-Host "Publish complete."
 }
 
-if (-not (Test-Path $tracksDirectory)) {
-  throw "Tracks directory not found: $tracksDirectory"
-}
-
+Ensure-AudioDirectories
 Set-Location $repoRoot
 
-Write-Host "Watching $tracksDirectory"
+Write-Host "Watching paired audio folders:"
+Write-Host " - $originalsDirectory"
+Write-Host " - $coversDirectory"
 Write-Host "Supported extensions: $($allowedExtensions -join ', ')"
 Write-Host "GitHub file limit: 100 MB per file"
 Write-Host "Press Ctrl+C to stop."

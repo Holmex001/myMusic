@@ -1,11 +1,11 @@
-﻿param(
-  [string]$TracksDirectory = "audio/tracks",
+param(
+  [string]$OriginalsDirectory = "audio/originals",
+  [string]$CoversDirectory = "audio/covers",
   [string]$OutputFile = "audio/playlist.json"
 )
 
 $allowedExtensions = @(".mp3", ".wav", ".ogg", ".m4a", ".flac", ".aac", ".mp4")
-$defaultArtist = "未知艺术家"
-$defaultAlbum = "我的音乐"
+$defaultAlbum = "My Music"
 
 function Convert-ToTrackTitle {
   param(
@@ -17,42 +17,113 @@ function Convert-ToTrackTitle {
   $prettyTitle = ($decodedName -replace "[-_]+", " ").Trim()
 
   if ([string]::IsNullOrWhiteSpace($prettyTitle)) {
-    return "未命名曲目"
+    return "Untitled Track"
   }
 
-  return (Get-Culture).TextInfo.ToTitleCase($prettyTitle)
+  return $prettyTitle
 }
 
-function Convert-ToTrackSource {
+function Convert-ToTrackKey {
   param(
     [string]$FileName
   )
 
+  $baseName = [System.IO.Path]::GetFileNameWithoutExtension($FileName)
+  return ([System.Uri]::UnescapeDataString($baseName)).Trim().ToLowerInvariant()
+}
+
+function Convert-ToTrackSource {
+  param(
+    [string]$FolderPath,
+    [string]$FileName
+  )
+
   $encodedName = [System.Uri]::EscapeDataString($FileName)
-  return "./audio/tracks/$encodedName"
+  return "./${FolderPath}/${encodedName}"
 }
 
-if (-not (Test-Path $TracksDirectory)) {
-  throw "Tracks directory not found: $TracksDirectory"
+function Ensure-Directory {
+  param(
+    [string]$Path
+  )
+
+  if (-not (Test-Path $Path)) {
+    New-Item -ItemType Directory -Path $Path | Out-Null
+  }
 }
 
-$tracks = @(
-  Get-ChildItem -Path $TracksDirectory -File |
-    Where-Object { $allowedExtensions -contains $_.Extension.ToLowerInvariant() } |
-    Sort-Object Name |
-    ForEach-Object {
-      [PSCustomObject]@{
-        title = Convert-ToTrackTitle $_.Name
-        artist = $defaultArtist
-        album = $defaultAlbum
-        src = Convert-ToTrackSource $_.Name
-        duration = ""
+function Get-RoleTracks {
+  param(
+    [string]$Directory,
+    [string]$Role
+  )
+
+  if (-not (Test-Path $Directory)) {
+    return @()
+  }
+
+  $roleLabel = if ($Role -eq "original") { "Original" } else { "Cover" }
+
+  return @(
+    Get-ChildItem -Path $Directory -File |
+      Where-Object { $allowedExtensions -contains $_.Extension.ToLowerInvariant() } |
+      Sort-Object Name |
+      ForEach-Object {
+        [PSCustomObject]@{
+          key = Convert-ToTrackKey $_.Name
+          title = Convert-ToTrackTitle $_.Name
+          role = $Role
+          track = [PSCustomObject]@{
+            title = Convert-ToTrackTitle $_.Name
+            artist = $roleLabel
+            album = $defaultAlbum
+            src = Convert-ToTrackSource ($Directory -replace "\\", "/") $_.Name
+            duration = ""
+          }
+        }
       }
+  )
+}
+
+Ensure-Directory $OriginalsDirectory
+Ensure-Directory $CoversDirectory
+
+$songMap = @{}
+
+foreach ($entry in (Get-RoleTracks -Directory $OriginalsDirectory -Role "original")) {
+  if (-not $songMap.ContainsKey($entry.key)) {
+    $songMap[$entry.key] = [ordered]@{
+      key = $entry.key
+      title = $entry.title
+      original = $null
+      cover = $null
     }
+  }
+
+  $songMap[$entry.key].original = $entry.track
+}
+
+foreach ($entry in (Get-RoleTracks -Directory $CoversDirectory -Role "cover")) {
+  if (-not $songMap.ContainsKey($entry.key)) {
+    $songMap[$entry.key] = [ordered]@{
+      key = $entry.key
+      title = $entry.title
+      original = $null
+      cover = $null
+    }
+  }
+
+  $songMap[$entry.key].cover = $entry.track
+}
+
+$songs = @(
+  $songMap.Values |
+    Sort-Object title |
+    ForEach-Object { [PSCustomObject]$_ }
 )
 
 $payload = [PSCustomObject]@{
-  tracks = $tracks
+  songs = $songs
 }
 
 $directory = Split-Path -Parent $OutputFile
@@ -61,6 +132,5 @@ if ($directory -and -not (Test-Path $directory)) {
   New-Item -ItemType Directory -Path $directory | Out-Null
 }
 
-$payload | ConvertTo-Json -Depth 4 | Set-Content -Path $OutputFile -Encoding UTF8
-Write-Host "Playlist generated: $OutputFile ($($tracks.Count) tracks)"
-
+$payload | ConvertTo-Json -Depth 6 | Set-Content -Path $OutputFile -Encoding UTF8
+Write-Host "Playlist generated: ${OutputFile} ($($songs.Count) song pairs)"

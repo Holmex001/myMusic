@@ -1,4 +1,4 @@
-﻿const audio = document.querySelector("#audio-player");
+const audio = document.querySelector("#audio-player");
 const playButton = document.querySelector("#play-button");
 const prevButton = document.querySelector("#prev-button");
 const nextButton = document.querySelector("#next-button");
@@ -18,13 +18,26 @@ const trackCountElement = document.querySelector("#track-count");
 const sourceNoteElement = document.querySelector("#playlist-source");
 const pageShell = document.querySelector(".page-shell");
 
-const AUDIO_FOLDER = "audio/tracks";
 const AUDIO_EXTENSIONS = new Set([".mp3", ".wav", ".ogg", ".m4a", ".flac", ".aac", ".mp4"]);
-const DEFAULT_ARTIST = "未知艺术家";
+const VERSION_CONFIG = {
+  original: {
+    label: "原唱",
+    folder: "audio/originals",
+    metaName: "github-original-audio-path"
+  },
+  cover: {
+    label: "翻唱",
+    folder: "audio/covers",
+    metaName: "github-cover-audio-path"
+  }
+};
 const DEFAULT_ALBUM = document.title.trim() || "我的音乐";
+const EMPTY_ARTIST_TEXT = "请将原唱放入 audio/originals，将翻唱放入 audio/covers";
+const EMPTY_ALBUM_TEXT = "同名文件会自动配对";
 
-let tracks = [];
-let currentIndex = 0;
+let songs = [];
+let currentSongIndex = 0;
+let currentRole = "cover";
 let isShuffleEnabled = false;
 let isRepeatEnabled = false;
 let isAutoplayEnabled = false;
@@ -79,7 +92,6 @@ function joinUrlParts(...parts) {
 function filenameToTitle(filename) {
   const nameWithoutExtension = filename.replace(/\.[^.]+$/, "");
   const decodedName = safeDecodeURIComponent(nameWithoutExtension).replace(/[-_]+/g, " ").trim();
-
   return decodedName || "未命名曲目";
 }
 
@@ -88,20 +100,84 @@ function getFilenameFromSource(src) {
   return cleanSource.split("/").filter(Boolean).pop() || "";
 }
 
-function normalizeTrack(track, fallback = {}) {
+function getSongKey(value) {
+  return String(value || "").trim().toLocaleLowerCase();
+}
+
+function getSongKeyFromFilename(filename) {
+  return getSongKey(safeDecodeURIComponent(filename.replace(/\.[^.]+$/, "")));
+}
+
+function getOtherRole(role) {
+  return role === "original" ? "cover" : "original";
+}
+
+function createTrack(track, fallback = {}) {
+  const role = fallback.role || track?.role || "cover";
   const source = String(track?.src || fallback.src || "");
   const filename = fallback.filename || getFilenameFromSource(source);
-  const title = String(track?.title || fallback.title || filenameToTitle(filename)).trim();
-  const artist = String(track?.artist || fallback.artist || DEFAULT_ARTIST).trim();
-  const album = String(track?.album || fallback.album || DEFAULT_ALBUM).trim();
+  const title = String(track?.title || fallback.title || filenameToTitle(filename)).trim() || "未命名曲目";
+  const artist = String(track?.artist || fallback.artist || VERSION_CONFIG[role].label).trim() || VERSION_CONFIG[role].label;
+  const album = String(track?.album || fallback.album || DEFAULT_ALBUM).trim() || DEFAULT_ALBUM;
   const duration = String(track?.duration || fallback.duration || "").trim();
+  const key =
+    String(track?.key || fallback.key || getSongKeyFromFilename(filename) || getSongKey(title)).trim() ||
+    getSongKey(title);
 
   return {
-    title: title || filenameToTitle(filename),
-    artist: artist || DEFAULT_ARTIST,
-    album: album || DEFAULT_ALBUM,
+    key,
+    title,
+    artist,
+    album,
     src: source,
-    duration
+    duration,
+    role,
+    roleLabel: VERSION_CONFIG[role].label
+  };
+}
+
+function buildSongPairs(roleTracks) {
+  const songMap = new Map();
+
+  roleTracks.forEach((track) => {
+    if (!track?.key) {
+      return;
+    }
+
+    const existing = songMap.get(track.key) || {
+      key: track.key,
+      title: track.title,
+      original: null,
+      cover: null
+    };
+
+    existing.title = existing.title || track.title;
+    existing[track.role] = track;
+    songMap.set(track.key, existing);
+  });
+
+  return [...songMap.values()].sort((left, right) => left.title.localeCompare(right.title, "zh-CN"));
+}
+
+function normalizeSongPair(song) {
+  const title = String(song?.title || "").trim();
+  const original = song?.original ? createTrack(song.original, { role: "original", title, key: song.key }) : null;
+  const cover = song?.cover ? createTrack(song.cover, { role: "cover", title, key: song.key }) : null;
+  const key =
+    getSongKey(song?.key) ||
+    original?.key ||
+    cover?.key ||
+    getSongKey(title);
+
+  if (!key || (!original && !cover)) {
+    return null;
+  }
+
+  return {
+    key,
+    title: title || original?.title || cover?.title || "未命名曲目",
+    original,
+    cover
   };
 }
 
@@ -109,14 +185,16 @@ function getGitHubContext() {
   const ownerOverride = readMetaContent("github-owner");
   const repoOverride = readMetaContent("github-repo");
   const branch = readMetaContent("github-branch") || "main";
-  const audioPath = readMetaContent("github-audio-path") || AUDIO_FOLDER;
+  const originalPath = readMetaContent(VERSION_CONFIG.original.metaName) || VERSION_CONFIG.original.folder;
+  const coverPath = readMetaContent(VERSION_CONFIG.cover.metaName) || VERSION_CONFIG.cover.folder;
 
   if (ownerOverride && repoOverride) {
     return {
       owner: ownerOverride,
       repo: repoOverride,
       branch,
-      audioPath,
+      originalPath,
+      coverPath,
       basePath: ""
     };
   }
@@ -138,7 +216,8 @@ function getGitHubContext() {
     owner,
     repo,
     branch,
-    audioPath,
+    originalPath,
+    coverPath,
     basePath
   };
 }
@@ -147,29 +226,83 @@ function updateSourceNote(message) {
   sourceNoteElement.textContent = message;
 }
 
-function updateActiveTrack() {
-  const items = playlistElement.querySelectorAll(".playlist-item");
+function getSongStatusText(song) {
+  if (song.original && song.cover) {
+    return "原唱与翻唱已配对";
+  }
 
-  items.forEach((item, index) => {
-    item.classList.toggle("active", index === currentIndex);
+  if (song.cover) {
+    return "只有翻唱，待补原唱";
+  }
+
+  if (song.original) {
+    return "只有原唱，待补翻唱";
+  }
+
+  return "暂无可播放版本";
+}
+
+function updateActiveTrack() {
+  const slots = playlistElement.querySelectorAll(".pair-slot.available");
+  const rows = playlistElement.querySelectorAll(".pair-item");
+
+  rows.forEach((row, index) => {
+    row.classList.toggle("active-row", index === currentSongIndex);
+  });
+
+  slots.forEach((slot) => {
+    const songIndex = Number(slot.dataset.songIndex);
+    const role = slot.dataset.role;
+    const isActive = songIndex === currentSongIndex && role === currentRole;
+    slot.classList.toggle("active", isActive);
+    slot.setAttribute("aria-pressed", String(isActive));
   });
 }
 
-function updateTrackInfo(track) {
-  if (!track) {
+function updateTrackInfo(selection) {
+  if (!selection) {
     titleElement.textContent = "准备加载";
-    artistElement.textContent = "请将音频文件放入 audio/tracks";
-    albumElement.textContent = "播放列表";
+    artistElement.textContent = EMPTY_ARTIST_TEXT;
+    albumElement.textContent = EMPTY_ALBUM_TEXT;
     return;
   }
 
-  titleElement.textContent = track.title;
-  artistElement.textContent = track.artist || DEFAULT_ARTIST;
-  albumElement.textContent = track.album || DEFAULT_ALBUM;
+  const song = songs[selection.songIndex];
+  titleElement.textContent = selection.track.title;
+  artistElement.textContent = `当前版本：${selection.track.roleLabel}`;
+  albumElement.textContent = getSongStatusText(song);
 }
 
-function loadTrack(index, { autoplay = false } = {}) {
-  if (!tracks.length) {
+function resolveSelection(songIndex, preferredRole = currentRole) {
+  const song = songs[songIndex];
+
+  if (!song) {
+    return null;
+  }
+
+  if (song[preferredRole]) {
+    return {
+      songIndex,
+      role: preferredRole,
+      track: song[preferredRole]
+    };
+  }
+
+  const otherRole = getOtherRole(preferredRole);
+
+  if (song[otherRole]) {
+    return {
+      songIndex,
+      role: otherRole,
+      track: song[otherRole]
+    };
+  }
+
+  return null;
+}
+
+function loadSelection(songIndex, preferredRole, { autoplay = false } = {}) {
+  if (!songs.length) {
     updateTrackInfo(null);
     audio.removeAttribute("src");
     audio.load();
@@ -177,14 +310,20 @@ function loadTrack(index, { autoplay = false } = {}) {
     return;
   }
 
-  currentIndex = (index + tracks.length) % tracks.length;
-  const track = tracks[currentIndex];
-  audio.src = track.src;
+  const selection = resolveSelection(songIndex, preferredRole);
+
+  if (!selection) {
+    return;
+  }
+
+  currentSongIndex = selection.songIndex;
+  currentRole = selection.role;
+  audio.src = selection.track.src;
   audio.load();
 
-  updateTrackInfo(track);
+  updateTrackInfo(selection);
   currentTimeElement.textContent = "0:00";
-  totalTimeElement.textContent = track.duration || "--:--";
+  totalTimeElement.textContent = selection.track.duration || "--:--";
   seekBar.value = 0;
   updateActiveTrack();
 
@@ -210,81 +349,135 @@ function syncPlayState() {
   pageShell.classList.toggle("is-playing", isPlaying);
 }
 
+function createSlot(songIndex, role, track) {
+  const cell = document.createElement("div");
+  cell.className = "pair-cell";
+  cell.dataset.label = VERSION_CONFIG[role].label;
+
+  if (!track) {
+    const placeholder = document.createElement("span");
+    placeholder.className = "pair-slot missing";
+    placeholder.textContent = "待添加";
+    cell.appendChild(placeholder);
+    return cell;
+  }
+
+  const button = document.createElement("button");
+  button.className = "pair-slot available";
+  button.type = "button";
+  button.dataset.songIndex = String(songIndex);
+  button.dataset.role = role;
+  button.setAttribute("aria-pressed", "false");
+  button.setAttribute("aria-label", `播放${track.roleLabel}：${track.title}`);
+  button.addEventListener("click", () => {
+    loadSelection(songIndex, role, { autoplay: true });
+  });
+
+  const action = document.createElement("strong");
+  action.className = "pair-slot-action";
+  action.textContent = "播放";
+
+  const note = document.createElement("span");
+  note.className = "pair-slot-note";
+  note.textContent = track.duration || "已就绪";
+
+  button.append(action, note);
+  cell.appendChild(button);
+  return cell;
+}
+
 function renderPlaylist() {
   playlistElement.innerHTML = "";
-  trackCountElement.textContent = `${tracks.length} 首`;
-  playlistEmptyElement.hidden = tracks.length > 0;
+  trackCountElement.textContent = `${songs.length} 组`;
+  playlistEmptyElement.hidden = songs.length > 0;
 
-  tracks.forEach((track, index) => {
+  songs.forEach((song, index) => {
     const item = document.createElement("li");
-    item.className = "playlist-item";
+    item.className = "pair-item";
 
-    const button = document.createElement("button");
-    button.className = "playlist-button";
-    button.type = "button";
-    button.addEventListener("click", () => {
-      loadTrack(index, { autoplay: true });
-    });
-
-    const meta = document.createElement("div");
-    meta.className = "track-meta";
-    meta.innerHTML = `
-      <strong>${track.title}</strong>
-      <span>${track.artist || DEFAULT_ARTIST}</span>
-    `;
-
-    button.appendChild(meta);
+    const songCell = document.createElement("div");
+    songCell.className = "pair-song";
 
     const indexBadge = document.createElement("span");
     indexBadge.className = "track-index";
     indexBadge.textContent = String(index + 1).padStart(2, "0");
 
-    const duration = document.createElement("span");
-    duration.className = "track-time";
-    duration.textContent = track.duration || "--:--";
+    const songCopy = document.createElement("div");
+    songCopy.className = "pair-song-copy";
 
-    item.append(indexBadge, button, duration);
+    const title = document.createElement("strong");
+    title.textContent = song.title;
+
+    const status = document.createElement("span");
+    status.textContent = getSongStatusText(song);
+
+    songCopy.append(title, status);
+    songCell.append(indexBadge, songCopy);
+
+    item.append(songCell, createSlot(index, "original", song.original), createSlot(index, "cover", song.cover));
     playlistElement.appendChild(item);
   });
 
   updateActiveTrack();
 }
 
-function getNextIndex() {
-  if (!tracks.length) {
-    return 0;
+function findAdjacentSelection(step) {
+  if (!songs.length) {
+    return null;
   }
 
-  if (isShuffleEnabled && tracks.length > 1) {
-    let randomIndex = currentIndex;
+  let fallbackSelection = null;
 
-    while (randomIndex === currentIndex) {
-      randomIndex = Math.floor(Math.random() * tracks.length);
+  for (let offset = 1; offset <= songs.length; offset += 1) {
+    const index = (currentSongIndex + step * offset + songs.length) % songs.length;
+    const selection = resolveSelection(index, currentRole);
+
+    if (!selection) {
+      continue;
     }
 
-    return randomIndex;
+    if (selection.role === currentRole) {
+      return selection;
+    }
+
+    if (!fallbackSelection) {
+      fallbackSelection = selection;
+    }
   }
 
-  return (currentIndex + 1) % tracks.length;
+  return fallbackSelection || resolveSelection(currentSongIndex, currentRole);
 }
 
-function getPreviousIndex() {
-  if (!tracks.length) {
-    return 0;
+function getRandomSelection() {
+  if (!songs.length) {
+    return null;
   }
 
-  return (currentIndex - 1 + tracks.length) % tracks.length;
+  if (songs.length === 1) {
+    return resolveSelection(currentSongIndex, currentRole);
+  }
+
+  const availableIndexes = songs
+    .map((song, index) => (song.original || song.cover ? index : -1))
+    .filter((index) => index >= 0 && index !== currentSongIndex);
+
+  while (availableIndexes.length) {
+    const randomOffset = Math.floor(Math.random() * availableIndexes.length);
+    const candidateIndex = availableIndexes.splice(randomOffset, 1)[0];
+    const selection = resolveSelection(candidateIndex, currentRole);
+
+    if (selection) {
+      return selection;
+    }
+  }
+
+  return resolveSelection(currentSongIndex, currentRole);
 }
 
-async function loadTracksFromGitHub() {
-  const context = getGitHubContext();
-
-  if (!context) {
-    throw new Error("GitHub repository context is unavailable.");
-  }
-
+async function loadTracksForRoleFromGitHub(context, role) {
+  const folderPath = context[`${role}Path`];
   const apiUrl = `https://api.github.com/repos/${context.owner}/${context.repo}/contents/${encodePath(
-    context.audioPath
+    folderPath
   )}?ref=${encodeURIComponent(context.branch)}`;
   const response = await fetch(apiUrl, {
     headers: {
@@ -292,35 +485,55 @@ async function loadTracksFromGitHub() {
     }
   });
 
+  if (response.status === 404) {
+    return [];
+  }
+
   if (!response.ok) {
-    throw new Error(`GitHub API request failed: ${response.status}`);
+    throw new Error(`GitHub API request failed for ${role}: ${response.status}`);
   }
 
   const items = await response.json();
 
   if (!Array.isArray(items)) {
-    throw new Error("Unexpected GitHub API payload.");
+    throw new Error(`Unexpected GitHub API payload for ${role}.`);
   }
 
   return items
     .filter((item) => item.type === "file")
     .filter((item) => AUDIO_EXTENSIONS.has(item.name.slice(item.name.lastIndexOf(".")).toLowerCase()))
-    .sort((left, right) => left.name.localeCompare(right.name, "en"))
+    .sort((left, right) => left.name.localeCompare(right.name, "zh-CN"))
     .map((item) => {
-      const relativeSource = joinUrlParts(context.basePath, context.audioPath, encodeURIComponent(item.name));
+      const relativeSource = joinUrlParts(context.basePath, folderPath, encodeURIComponent(item.name));
 
-      return normalizeTrack(
+      return createTrack(
         {
           src: relativeSource
         },
         {
-          filename: item.name
+          filename: item.name,
+          role
         }
       );
     });
 }
 
-async function loadTracksFromManifest() {
+async function loadSongsFromGitHub() {
+  const context = getGitHubContext();
+
+  if (!context) {
+    throw new Error("GitHub repository context is unavailable.");
+  }
+
+  const [originalTracks, coverTracks] = await Promise.all([
+    loadTracksForRoleFromGitHub(context, "original"),
+    loadTracksForRoleFromGitHub(context, "cover")
+  ]);
+
+  return buildSongPairs([...originalTracks, ...coverTracks]);
+}
+
+async function loadSongsFromManifest() {
   const response = await fetch("./audio/playlist.json", { cache: "no-store" });
 
   if (!response.ok) {
@@ -328,21 +541,34 @@ async function loadTracksFromManifest() {
   }
 
   const data = await response.json();
-  return Array.isArray(data.tracks) ? data.tracks.map((track) => normalizeTrack(track)) : [];
+
+  if (Array.isArray(data.songs)) {
+    return data.songs
+      .map((song) => normalizeSongPair(song))
+      .filter(Boolean)
+      .sort((left, right) => left.title.localeCompare(right.title, "zh-CN"));
+  }
+
+  if (Array.isArray(data.tracks)) {
+    const coverTracks = data.tracks.map((track) => createTrack(track, { role: "cover" }));
+    return buildSongPairs(coverTracks);
+  }
+
+  return [];
 }
 
 async function loadPlaylist() {
   try {
-    tracks = await loadTracksFromGitHub();
-    updateSourceNote("已从 GitHub 仓库的音频目录自动加载。");
+    songs = await loadSongsFromGitHub();
+    updateSourceNote("已从 GitHub 仓库的原唱与翻唱目录自动加载。");
   } catch (githubError) {
     try {
-      tracks = await loadTracksFromManifest();
-      updateSourceNote("已从 audio/playlist.json 回退清单加载。");
+      songs = await loadSongsFromManifest();
+      updateSourceNote("已从 audio/playlist.json 本地配对清单加载。");
     } catch (manifestError) {
-      tracks = [];
+      songs = [];
       updateSourceNote(
-        "未找到曲目。在 GitHub Pages 上，audio/tracks 中的文件会自动加载；如果使用自定义域名，请填写仓库 meta 标签或保留本地清单回退。"
+        "未找到歌曲。请将原唱放入 audio/originals，将翻唱放入 audio/covers；使用自定义域名时，请填写仓库 meta 标签或保留本地清单回退。"
       );
       console.error(githubError);
       console.error(manifestError);
@@ -350,11 +576,11 @@ async function loadPlaylist() {
   }
 
   renderPlaylist();
-  loadTrack(0);
+  loadSelection(0, "cover");
 }
 
 playButton.addEventListener("click", async () => {
-  if (!tracks.length) {
+  if (!songs.length) {
     return;
   }
 
@@ -372,19 +598,23 @@ playButton.addEventListener("click", async () => {
 });
 
 prevButton.addEventListener("click", () => {
-  if (!tracks.length) {
+  const selection = findAdjacentSelection(-1);
+
+  if (!selection) {
     return;
   }
 
-  loadTrack(getPreviousIndex(), { autoplay: true });
+  loadSelection(selection.songIndex, selection.role, { autoplay: true });
 });
 
 nextButton.addEventListener("click", () => {
-  if (!tracks.length) {
+  const selection = isShuffleEnabled ? getRandomSelection() : findAdjacentSelection(1);
+
+  if (!selection) {
     return;
   }
 
-  loadTrack(getNextIndex(), { autoplay: true });
+  loadSelection(selection.songIndex, selection.role, { autoplay: true });
 });
 
 shuffleButton.addEventListener("click", () => {
@@ -400,7 +630,7 @@ repeatButton.addEventListener("click", () => {
 autoplayButton.addEventListener("click", () => {
   isAutoplayEnabled = !isAutoplayEnabled;
   autoplayButton.setAttribute("aria-pressed", String(isAutoplayEnabled));
-  autoplayButton.textContent = isAutoplayEnabled ? "自动播放：开" : "自动播放：关";
+  autoplayButton.textContent = isAutoplayEnabled ? "自动切换：开" : "自动切换：关";
 });
 
 seekBar.addEventListener("input", () => {
@@ -439,8 +669,12 @@ audio.addEventListener("ended", () => {
   }
 
   if (isAutoplayEnabled || isShuffleEnabled) {
-    loadTrack(getNextIndex(), { autoplay: true });
-    return;
+    const selection = isShuffleEnabled ? getRandomSelection() : findAdjacentSelection(1);
+
+    if (selection) {
+      loadSelection(selection.songIndex, selection.role, { autoplay: true });
+      return;
+    }
   }
 
   syncPlayState();
@@ -448,4 +682,3 @@ audio.addEventListener("ended", () => {
 
 audio.volume = Number(volumeBar.value);
 loadPlaylist();
-

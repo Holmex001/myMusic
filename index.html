@@ -11,7 +11,8 @@
     <meta name="github-branch" content="main" />
     <meta name="github-owner" content="" />
     <meta name="github-repo" content="" />
-    <meta name="github-audio-path" content="audio/tracks" />
+    <meta name="github-original-audio-path" content="audio/originals" />
+    <meta name="github-cover-audio-path" content="audio/covers" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -25,10 +26,11 @@
       <header class="hero">
         <div class="hero-copy">
           <p class="eyebrow">GitHub Pages 音乐播放器</p>
-          <h1>播放仓库里保存的音频文件。</h1>
+          <h1>把原唱和翻唱按同名文件成对播放。</h1>
           <p class="hero-text">
-            把音乐文件放进 <code>audio/tracks/</code>。当站点部署到 GitHub Pages
-            后，页面会自动发现这个目录并生成播放列表，无需手动编辑
+            把原唱放进 <code>audio/originals/</code>，把翻唱放进
+            <code>audio/covers/</code>。同一首歌请使用相同文件名，页面会自动把两边配对，
+            并在 GitHub Pages 上直接生成双版本播放列表，无需手动编辑
             <code>audio/playlist.json</code>。
           </p>
         </div>
@@ -45,10 +47,12 @@
             <div>
               <p class="section-label">正在播放</p>
               <h2 id="track-title">准备加载</h2>
-              <p id="track-artist" class="muted">请将音频文件放入 audio/tracks</p>
+              <p id="track-artist" class="muted">
+                请将原唱放入 audio/originals，将翻唱放入 audio/covers
+              </p>
             </div>
             <button id="theme-glow" class="ghost-chip" type="button">
-              静态站点
+              双版本配对
             </button>
           </div>
 
@@ -57,7 +61,7 @@
               <div class="record-inner"></div>
             </div>
             <div class="art-copy">
-              <p id="track-album" class="album-text">播放列表</p>
+              <p id="track-album" class="album-text">同名文件会自动配对</p>
               <div class="visualizer" aria-hidden="true">
                 <span></span>
                 <span></span>
@@ -101,7 +105,7 @@
               <input id="volume-bar" type="range" min="0" max="1" step="0.01" value="0.8" />
             </label>
             <button id="autoplay-button" class="ghost-chip" type="button" aria-pressed="false">
-              自动播放：关
+              自动切换：关
             </button>
           </div>
         </section>
@@ -109,22 +113,27 @@
         <aside class="playlist-card">
           <div class="playlist-head">
             <div>
-              <p class="section-label">队列</p>
-              <h2>播放列表</h2>
+              <p class="section-label">配对歌单</p>
+              <h2>原唱 / 翻唱</h2>
             </div>
-            <span id="track-count" class="count-chip">0 首</span>
+            <span id="track-count" class="count-chip">0 组</span>
           </div>
           <p id="playlist-source" class="muted source-note">
             正在等待音频来源。
           </p>
+          <div class="pair-grid-head" aria-hidden="true">
+            <span>歌曲</span>
+            <span>原唱</span>
+            <span>翻唱</span>
+          </div>
           <div id="playlist-empty" class="empty-state" hidden>
-            <p>没有找到可播放的音频文件。</p>
+            <p>没有找到可播放的配对歌曲。</p>
             <p>
-              请把文件放到 <code>audio/tracks/</code>。在标准 GitHub Pages 地址下，
-              站点部署后会自动发现这些文件。
+              请把原唱放到 <code>audio/originals/</code>，把翻唱放到
+              <code>audio/covers/</code>。同一首歌请使用相同文件名，站点部署后会自动把它们配对。
             </p>
           </div>
-          <ol id="playlist" class="playlist" aria-label="音乐播放列表"></ol>
+          <ol id="playlist" class="pair-list" aria-label="原唱与翻唱配对列表"></ol>
         </aside>
       </main>
     </div>

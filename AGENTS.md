@@ -6,18 +6,19 @@ This repository is a static GitHub Pages music player. Keep the layout simple an
 - `index.html` contains the single-page shell
 - `styles.css` contains theme, layout, and responsive rules
 - `script.js` contains playlist loading and playback behavior
-- `audio/tracks/` stores committed audio files
+- `audio/originals/` stores committed original tracks
+- `audio/covers/` stores committed cover tracks
 - `audio/playlist.json` is an optional local fallback manifest
-- `scripts/build-playlist.ps1` rebuilds the fallback manifest from the audio folder
-- `scripts/watch-and-publish.ps1` watches `audio/tracks/` and auto-pushes audio updates
+- `scripts/build-playlist.ps1` rebuilds the fallback manifest from the paired audio folders
+- `scripts/watch-and-publish.ps1` watches `audio/originals/` and `audio/covers/` and auto-pushes audio updates
 
 Keep asset paths relative so the site works from the repository root on GitHub Pages.
 
 ## Build, Test, and Development Commands
 There is no required build step. Use these commands during development:
 
-- `./scripts/build-playlist.ps1` scans `audio/tracks/` and regenerates the fallback `audio/playlist.json`
-- `./scripts/watch-and-publish.ps1` monitors `audio/tracks/` and pushes audio changes automatically
+- `./scripts/build-playlist.ps1` scans `audio/originals/` and `audio/covers/` and regenerates the fallback `audio/playlist.json`
+- `./scripts/watch-and-publish.ps1` monitors `audio/originals/` and `audio/covers/` and pushes audio changes automatically
 - `python -m http.server 8080` serves the site locally at `http://localhost:8080`
 - `git diff` reviews final HTML, CSS, JS, and manifest changes
 
@@ -34,7 +35,7 @@ Use 2-space indentation in HTML, CSS, and JavaScript. Prefer descriptive names a
 There is no automated test suite yet. Before opening a PR:
 
 - Run the site locally with a static server
-- Verify GitHub Pages auto-discovery after adding or renaming audio files
+- Verify GitHub Pages auto-discovery after adding or renaming paired original/cover audio files
 - If using local fallback, verify `audio/playlist.json` generation
 - Check playback, seek, next/previous, shuffle, repeat, and mobile layout manually
 
@@ -44,4 +45,4 @@ Use short, imperative commit messages such as `Add playlist generator`. Keep com
 Pull requests should include a short summary, local verification notes, and screenshots when the UI changes.
 
 ## Agent-Specific Notes
-Preserve the static-site approach, keep GitHub Pages auto-discovery working, and update this guide whenever the deployment workflow or file layout changes.
+Preserve the static-site approach, keep GitHub Pages auto-discovery working for paired original/cover folders, and update this guide whenever the deployment workflow or file layout changes.
