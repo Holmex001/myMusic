@@ -8,6 +8,7 @@ This repository is a static GitHub Pages music player. Keep the layout simple an
 - `script.js` contains playlist loading and playback behavior
 - `audio/originals/` stores committed original tracks
 - `audio/covers/` stores committed cover tracks
+- `lyrics/` stores optional `.txt` lyric files named to match paired songs
 - `audio-masters/` is an optional local-only folder for archival high-quality sources and should not be committed
 - `audio/playlist.json` is an optional local fallback manifest
 - `.githooks/pre-commit` auto-converts `audio-masters/originals/` into `audio/originals/` and regenerates `audio/playlist.json` before commit
@@ -37,6 +38,7 @@ There is no automated test suite yet. Before opening a PR:
 
 - Run the site locally with a static server
 - Verify GitHub Pages auto-discovery after adding or renaming paired original/cover audio files
+- Verify `.txt` lyrics load correctly when placed in `lyrics/` with the same base filename as the paired song
 - Keep archival masters out of the web playback folders and generate compressed web versions for deployment
 - Keep original-master automation limited to `audio-masters/originals/`; covers are still managed manually
 - If using local fallback, verify `audio/playlist.json` generation

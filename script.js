@@ -17,6 +17,7 @@ const playlistEmptyElement = document.querySelector("#playlist-empty");
 const trackCountElement = document.querySelector("#track-count");
 const sourceNoteElement = document.querySelector("#playlist-source");
 const lyricsStatusElement = document.querySelector("#lyrics-status");
+const lyricsFollowButton = document.querySelector("#lyrics-follow-button");
 const lyricsRoleElement = document.querySelector("#lyrics-role");
 const lyricsCurrentLineElement = document.querySelector("#lyrics-current-line");
 const lyricsSublineElement = document.querySelector("#lyrics-subline");
@@ -40,6 +41,7 @@ const VERSION_CONFIG = {
 const DEFAULT_ALBUM = document.title.trim() || "我的音乐";
 const EMPTY_ARTIST_TEXT = "请将原唱放入 audio/originals，将翻唱放入 audio/covers";
 const EMPTY_ALBUM_TEXT = "同名文件会自动配对";
+const DEFAULT_LYRICS_PATH = "lyrics";
 
 let songs = [];
 let currentSongIndex = 0;
@@ -47,6 +49,8 @@ let currentRole = "cover";
 let isShuffleEnabled = false;
 let isRepeatEnabled = false;
 let isAutoplayEnabled = false;
+let lyricsRequestToken = 0;
+let lyricsSelection = null;
 
 function formatTime(seconds) {
   if (!Number.isFinite(seconds)) {
@@ -122,6 +126,7 @@ function createTrack(track, fallback = {}) {
   const role = fallback.role || track?.role || "cover";
   const source = String(track?.src || fallback.src || "");
   const filename = fallback.filename || getFilenameFromSource(source);
+  const basename = safeDecodeURIComponent(filename.replace(/\.[^.]+$/, "")).trim();
   const title = String(track?.title || fallback.title || filenameToTitle(filename)).trim() || "未命名曲目";
   const artist = String(track?.artist || fallback.artist || VERSION_CONFIG[role].label).trim() || VERSION_CONFIG[role].label;
   const album = String(track?.album || fallback.album || DEFAULT_ALBUM).trim() || DEFAULT_ALBUM;
@@ -138,7 +143,8 @@ function createTrack(track, fallback = {}) {
     src: source,
     duration,
     role,
-    roleLabel: VERSION_CONFIG[role].label
+    roleLabel: VERSION_CONFIG[role].label,
+    basename
   };
 }
 
@@ -183,12 +189,22 @@ function normalizeSongPair(song) {
   };
 }
 
+function getLyricsContext() {
+  const githubContext = getGitHubContext();
+
+  return {
+    basePath: githubContext?.basePath || "",
+    lyricsPath: readMetaContent("github-lyrics-path") || githubContext?.lyricsPath || DEFAULT_LYRICS_PATH
+  };
+}
+
 function getGitHubContext() {
   const ownerOverride = readMetaContent("github-owner");
   const repoOverride = readMetaContent("github-repo");
   const branch = readMetaContent("github-branch") || "main";
   const originalPath = readMetaContent(VERSION_CONFIG.original.metaName) || VERSION_CONFIG.original.folder;
   const coverPath = readMetaContent(VERSION_CONFIG.cover.metaName) || VERSION_CONFIG.cover.folder;
+  const lyricsPath = readMetaContent("github-lyrics-path") || DEFAULT_LYRICS_PATH;
 
   if (ownerOverride && repoOverride) {
     return {
@@ -197,6 +213,7 @@ function getGitHubContext() {
       branch,
       originalPath,
       coverPath,
+      lyricsPath,
       basePath: ""
     };
   }
@@ -220,6 +237,7 @@ function getGitHubContext() {
     branch,
     originalPath,
     coverPath,
+    lyricsPath,
     basePath
   };
 }
@@ -277,9 +295,7 @@ function getPlaceholderLyrics(selection) {
   };
 }
 
-function renderLyricsPanel(selection) {
-  const lyricsData = getPlaceholderLyrics(selection);
-
+function renderLyricsPanelData(lyricsData) {
   lyricsStatusElement.textContent = lyricsData.status;
   lyricsRoleElement.textContent = lyricsData.role;
   lyricsCurrentLineElement.textContent = lyricsData.currentLine;
@@ -298,6 +314,85 @@ function renderLyricsPanel(selection) {
     item.textContent = line;
     lyricsListElement.appendChild(item);
   });
+}
+
+function renderLyricsPanel(selection) {
+  lyricsSelection = selection;
+  renderLyricsPanelData(getPlaceholderLyrics(selection));
+}
+
+function getLyricsStem(selection) {
+  const song = songs[selection.songIndex];
+
+  return (
+    selection.track.basename ||
+    song?.original?.basename ||
+    song?.cover?.basename ||
+    song?.title ||
+    selection.track.title
+  );
+}
+
+function parseLyricsText(text) {
+  return String(text || "")
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+}
+
+async function fetchLyricsText(selection) {
+  const stem = getLyricsStem(selection);
+  const { basePath, lyricsPath } = getLyricsContext();
+  const lyricsUrl = joinUrlParts(basePath, lyricsPath, `${encodeURIComponent(stem)}.txt`);
+  const response = await fetch(lyricsUrl, { cache: "no-store" });
+
+  if (!response.ok) {
+    throw new Error(`Lyrics request failed: ${response.status}`);
+  }
+
+  return response.text();
+}
+
+async function loadLyricsForSelection(selection) {
+  const requestToken = ++lyricsRequestToken;
+  lyricsSelection = selection;
+  const placeholder = getPlaceholderLyrics(selection);
+  const stem = getLyricsStem(selection);
+
+  renderLyricsPanelData({
+    ...placeholder,
+    status: "正在加载歌词",
+    subline: `正在读取 lyrics/${stem}.txt`
+  });
+
+  try {
+    const lyricsText = await fetchLyricsText(selection);
+
+    if (requestToken !== lyricsRequestToken) {
+      return;
+    }
+
+    const lines = parseLyricsText(lyricsText);
+
+    if (!lines.length) {
+      renderLyricsPanel(selection);
+      return;
+    }
+
+    renderLyricsPanelData({
+      status: "TXT 歌词",
+      role: `${selection.track.roleLabel}版本`,
+      currentLine: lines[0],
+      subline: `已加载 lyrics/${stem}.txt，共 ${lines.length} 行`,
+      lines
+    });
+  } catch {
+    if (requestToken !== lyricsRequestToken) {
+      return;
+    }
+
+    renderLyricsPanel(selection);
+  }
 }
 
 function updateActiveTrack() {
@@ -322,7 +417,6 @@ function updateTrackInfo(selection) {
     titleElement.textContent = "准备加载";
     artistElement.textContent = EMPTY_ARTIST_TEXT;
     albumElement.textContent = EMPTY_ALBUM_TEXT;
-    renderLyricsPanel(null);
     return;
   }
 
@@ -330,7 +424,6 @@ function updateTrackInfo(selection) {
   titleElement.textContent = selection.track.title;
   artistElement.textContent = `当前版本：${selection.track.roleLabel}`;
   albumElement.textContent = getSongStatusText(song);
-  renderLyricsPanel(selection);
 }
 
 function resolveSelection(songIndex, preferredRole = currentRole) {
@@ -691,6 +784,17 @@ autoplayButton.addEventListener("click", () => {
   isAutoplayEnabled = !isAutoplayEnabled;
   autoplayButton.setAttribute("aria-pressed", String(isAutoplayEnabled));
   autoplayButton.textContent = isAutoplayEnabled ? "自动切换：开" : "自动切换：关";
+});
+
+lyricsFollowButton.addEventListener("click", () => {
+  const selection = resolveSelection(currentSongIndex, currentRole);
+
+  if (!selection) {
+    renderLyricsPanel(null);
+    return;
+  }
+
+  void loadLyricsForSelection(selection);
 });
 
 seekBar.addEventListener("input", () => {

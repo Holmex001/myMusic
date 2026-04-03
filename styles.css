@@ -346,6 +346,12 @@ input[type="range"] {
   gap: 16px;
 }
 
+.lyrics-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
 .lyrics-head h2 {
   margin: 0;
   font-size: clamp(1.5rem, 3vw, 2.2rem);
@@ -650,6 +656,10 @@ input[type="range"] {
   .utility-row {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .lyrics-actions {
+    flex-wrap: wrap;
   }
 
   .controls {

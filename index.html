@@ -13,6 +13,7 @@
     <meta name="github-repo" content="" />
     <meta name="github-original-audio-path" content="audio/originals" />
     <meta name="github-cover-audio-path" content="audio/covers" />
+    <meta name="github-lyrics-path" content="lyrics" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -142,7 +143,12 @@
             <p class="section-label">歌词组件</p>
             <h2 id="lyrics-title">歌词</h2>
           </div>
-          <span id="lyrics-status" class="count-chip">暂无歌词</span>
+          <div class="lyrics-actions">
+            <button id="lyrics-follow-button" class="ghost-chip" type="button">
+              跳到当前歌词
+            </button>
+            <span id="lyrics-status" class="count-chip">暂无歌词</span>
+          </div>
         </div>
 
         <div class="lyrics-layout">

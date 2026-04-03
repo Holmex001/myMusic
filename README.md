@@ -6,6 +6,8 @@ A static web music player designed for GitHub Pages, with paired original and co
 
 Put original tracks into `audio/originals/` and cover tracks into `audio/covers/`. Use the same filename for the same song on both sides. On a normal GitHub Pages URL such as `https://username.github.io/repo/`, the player reads both repository folders through the GitHub API, pairs matching files automatically, and builds the playlist without editing `audio/playlist.json` for deployed usage.
 
+Lyrics can be stored as plain text files in `lyrics/`. Use the same base filename as the paired song, for example `lyrics/泡沫.txt`.
+
 Supported formats include `.mp3`, `.wav`, `.ogg`, `.m4a`, `.flac`, `.aac`, and `.mp4`.
 
 ## Audio Strategy
@@ -59,6 +61,16 @@ The repository also installs a local git `pre-commit` hook that:
 
 It does not auto-push. You still decide when to run `git commit` and `git push`.
 
+## Lyrics
+
+The lyrics panel supports `.txt` lyric files.
+
+- Put lyric files in `lyrics/`
+- Use the same base filename as the song pair
+- Example: `audio/originals/泡沫.m4a`, `audio/covers/泡沫.mp3`, `lyrics/泡沫.txt`
+
+Each non-empty line in the `.txt` file is rendered as one lyric line. The current implementation does not parse timestamps.
+
 ## Deploy to GitHub Pages
 
 1. Push this repository to GitHub.
@@ -72,3 +84,4 @@ After that, adding or removing files in `audio/originals/` or `audio/covers/`, r
 ## Custom Domain Note
 
 Automatic repository detection works best on standard `github.io` addresses. If you later bind a custom domain, fill in the `github-owner` and `github-repo` meta tags in `index.html` so the player still knows which repository folders to scan. You can also override the folder paths with `github-original-audio-path` and `github-cover-audio-path`.
+You can also override the lyrics folder with `github-lyrics-path`.
