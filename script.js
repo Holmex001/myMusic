@@ -336,8 +336,22 @@ function getLyricsStem(selection) {
 function parseLyricsText(text) {
   return String(text || "")
     .split(/\r?\n/)
-    .map((line) => line.trim())
+    .map((line) => line.replace(/^\uFEFF/, "").trim())
     .filter(Boolean);
+}
+
+function decodeLyricsBuffer(buffer) {
+  const utf8Text = new TextDecoder("utf-8", { fatal: false }).decode(buffer);
+
+  if (!utf8Text.includes("\uFFFD")) {
+    return utf8Text;
+  }
+
+  try {
+    return new TextDecoder("gb18030", { fatal: false }).decode(buffer);
+  } catch {
+    return utf8Text;
+  }
 }
 
 async function fetchLyricsText(selection) {
@@ -350,7 +364,8 @@ async function fetchLyricsText(selection) {
     throw new Error(`Lyrics request failed: ${response.status}`);
   }
 
-  return response.text();
+  const buffer = await response.arrayBuffer();
+  return decodeLyricsBuffer(buffer);
 }
 
 async function loadLyricsForSelection(selection) {
@@ -424,6 +439,21 @@ function updateTrackInfo(selection) {
   titleElement.textContent = selection.track.title;
   artistElement.textContent = `当前版本：${selection.track.roleLabel}`;
   albumElement.textContent = getSongStatusText(song);
+
+  if (!lyricsSelection) {
+    renderLyricsPanelData({
+      status: "歌词待加载",
+      role: "点击按钮同步",
+      currentLine: "已定位到当前歌曲",
+      subline: `当前播放《${song.title}》，点击“跳到当前歌词”后读取 lyrics/${getLyricsStem(selection)}.txt`,
+      lines: [
+        `当前歌曲：${song.title}`,
+        `当前版本：${selection.track.roleLabel}`,
+        "歌词组件不会随切歌自动刷新",
+        "点击右上角按钮后才会跳到当前歌曲歌词"
+      ]
+    });
+  }
 }
 
 function resolveSelection(songIndex, preferredRole = currentRole) {
