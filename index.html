@@ -1,179 +1,275 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="zh-CN">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>我的音乐</title>
-    <meta
-      name="description"
-      content="一个部署在 GitHub Pages 上的双版本音乐播放器，支持原唱与翻唱配对播放。"
-    />
-    <meta name="github-branch" content="main" />
-    <meta name="github-owner" content="" />
-    <meta name="github-repo" content="" />
-    <meta name="github-original-audio-path" content="audio/originals" />
-    <meta name="github-cover-audio-path" content="audio/covers" />
-    <meta name="github-lyrics-path" content="lyrics" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Noto+Sans+SC:wght@400;500;700&display=swap"
-      rel="stylesheet"
-    />
-    <link rel="stylesheet" href="./styles.css" />
-  </head>
-  <body>
-    <div class="page-shell">
-      <header class="hero">
-        <div class="hero-copy">
-          <p class="eyebrow">GitHub Pages 音乐播放器</p>
-          <h1>把原唱和翻唱按同名文件成对播放</h1>
-          <p class="hero-text">
-            把原唱放进 <code>audio/originals/</code>，把翻唱放进 <code>audio/covers/</code>。
-            同一首歌请使用相同的文件名，页面会自动把两边配对，并在 GitHub Pages 上直接生成双版本播放列表。
-          </p>
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>我的音乐</title>
+        <meta
+            name="description"
+            content="一个部署在 GitHub Pages 上的双版本音乐播放器，支持原唱与翻唱配对播放。"
+        />
+        <meta name="github-branch" content="main" />
+        <meta name="github-owner" content="" />
+        <meta name="github-repo" content="" />
+        <meta name="github-original-audio-path" content="audio/originals" />
+        <meta name="github-cover-audio-path" content="audio/covers" />
+        <meta name="github-lyrics-path" content="lyrics" />
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+        <link
+            href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Noto+Sans+SC:wght@400;500;700&display=swap"
+            rel="stylesheet"
+        />
+        <link rel="stylesheet" href="./styles.css" />
+    </head>
+    <body>
+        <div class="page-shell">
+            <header class="hero">
+                <div class="hero-copy">
+                    <p class="eyebrow">GitHub Pages 音乐播放器</p>
+                    <h1>翻唱小站</h1>
+                    <p class="hero-text">
+                        把原唱放进 <code>audio/originals/</code>，把翻唱放进
+                        <code>audio/covers/</code>。
+                        同一首歌请使用相同的文件名，页面会自动把两边配对，并在
+                        GitHub Pages 上直接生成双版本播放列表。
+                    </p>
+                </div>
+                <div class="hero-orb" aria-hidden="true">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </div>
+            </header>
+
+            <main class="layout">
+                <section class="player-card">
+                    <div class="player-top">
+                        <div>
+                            <p class="section-label">正在播放</p>
+                            <h2 id="track-title">准备加载</h2>
+                            <p id="track-artist" class="muted">
+                                请将原唱放入 audio/originals，将翻唱放入
+                                audio/covers
+                            </p>
+                        </div>
+                        <button
+                            id="theme-glow"
+                            class="ghost-chip"
+                            type="button"
+                        >
+                            双版本配对
+                        </button>
+                    </div>
+
+                    <div class="art-panel">
+                        <div class="record">
+                            <div class="record-inner"></div>
+                        </div>
+                        <div class="art-copy">
+                            <p id="track-album" class="album-text">
+                                同名文件会自动配对
+                            </p>
+                            <div class="visualizer" aria-hidden="true">
+                                <span></span>
+                                <span></span>
+                                <span></span>
+                                <span></span>
+                                <span></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="timeline">
+                        <label class="sr-only" for="seek-bar">播放进度</label>
+                        <input
+                            id="seek-bar"
+                            type="range"
+                            min="0"
+                            max="100"
+                            value="0"
+                        />
+                        <div class="time-row">
+                            <span id="current-time">0:00</span>
+                            <span id="total-time">0:00</span>
+                        </div>
+                    </div>
+
+                    <div class="controls">
+                        <button
+                            id="shuffle-button"
+                            class="ghost-button"
+                            type="button"
+                            aria-pressed="false"
+                        >
+                            随机
+                        </button>
+                        <button
+                            id="prev-button"
+                            class="round-button"
+                            type="button"
+                            aria-label="上一首"
+                        >
+                            &#9664;
+                        </button>
+                        <button
+                            id="play-button"
+                            class="play-button"
+                            type="button"
+                            aria-label="播放"
+                        >
+                            播放
+                        </button>
+                        <button
+                            id="next-button"
+                            class="round-button"
+                            type="button"
+                            aria-label="下一首"
+                        >
+                            &#9654;
+                        </button>
+                        <button
+                            id="repeat-button"
+                            class="ghost-button"
+                            type="button"
+                            aria-pressed="false"
+                        >
+                            单曲循环
+                        </button>
+                    </div>
+
+                    <div class="utility-row">
+                        <label class="volume-wrap" for="volume-bar">
+                            <span>音量</span>
+                            <input
+                                id="volume-bar"
+                                type="range"
+                                min="0"
+                                max="1"
+                                step="0.01"
+                                value="0.8"
+                            />
+                        </label>
+                        <button
+                            id="autoplay-button"
+                            class="ghost-chip"
+                            type="button"
+                            aria-pressed="false"
+                        >
+                            自动切歌：关
+                        </button>
+                    </div>
+                </section>
+
+                <aside class="playlist-card">
+                    <div class="playlist-head">
+                        <div>
+                            <p class="section-label">配对歌单</p>
+                            <h2>原唱 / 翻唱</h2>
+                        </div>
+                        <span id="track-count" class="count-chip">0 组</span>
+                    </div>
+                    <p id="playlist-source" class="muted source-note">
+                        正在等待音频来源。
+                    </p>
+                    <div class="pair-grid-head" aria-hidden="true">
+                        <span>歌曲</span>
+                        <span>原唱</span>
+                        <span>翻唱</span>
+                    </div>
+                    <div id="playlist-empty" class="empty-state" hidden>
+                        <p>没有找到可播放的配对歌曲。</p>
+                        <p>
+                            请把原唱放到
+                            <code>audio/originals/</code>，把翻唱放到
+                            <code>audio/covers/</code
+                            >。同一首歌请使用相同的文件名，站点部署后会自动把它们配对。
+                        </p>
+                    </div>
+                    <ol
+                        id="playlist"
+                        class="pair-list"
+                        aria-label="原唱与翻唱配对列表"
+                    ></ol>
+                </aside>
+            </main>
+
+            <section class="lyrics-card" aria-labelledby="lyrics-title">
+                <div class="lyrics-head">
+                    <div>
+                        <p class="section-label">歌词组件</p>
+                        <h2 id="lyrics-title">歌词</h2>
+                    </div>
+                    <div class="lyrics-actions">
+                        <button
+                            id="lyrics-follow-button"
+                            class="ghost-chip"
+                            type="button"
+                        >
+                            跳到当前歌词
+                        </button>
+                        <span id="lyrics-status" class="count-chip"
+                            >正在加载歌词目录</span
+                        >
+                    </div>
+                </div>
+
+                <div class="lyrics-layout">
+                    <section
+                        class="lyrics-display"
+                        aria-labelledby="lyrics-display-title"
+                    >
+                        <div class="lyrics-display-head">
+                            <p class="section-label" id="lyrics-display-title">
+                                歌词显示器
+                            </p>
+                            <span
+                                id="lyrics-display-title-text"
+                                class="ghost-chip"
+                                >未选择歌词</span
+                            >
+                        </div>
+                        <div
+                            id="lyrics-display-text"
+                            class="lyrics-text-view"
+                            aria-live="polite"
+                        >
+                            <p class="lyrics-paragraph is-placeholder">
+                                左侧会显示 TXT 歌词的完整文本。
+                            </p>
+                            <p class="lyrics-paragraph is-placeholder">
+                                请从右侧歌词单选择歌词，或点击“跳到当前歌词”快速定位。
+                            </p>
+                        </div>
+                    </section>
+
+                    <aside
+                        class="lyrics-sheet"
+                        aria-labelledby="lyrics-sheet-title"
+                    >
+                        <div class="lyrics-sheet-head">
+                            <p class="section-label" id="lyrics-sheet-title">
+                                歌词单
+                            </p>
+                            <span id="lyrics-count" class="ghost-chip"
+                                >0 份</span
+                            >
+                        </div>
+                        <ol
+                            id="lyrics-list"
+                            class="lyrics-list"
+                            aria-label="歌词目录"
+                        >
+                            <li class="lyrics-directory-empty">
+                                正在等待歌词目录
+                            </li>
+                        </ol>
+                    </aside>
+                </div>
+            </section>
         </div>
-        <div class="hero-orb" aria-hidden="true">
-          <span></span>
-          <span></span>
-          <span></span>
-        </div>
-      </header>
 
-      <main class="layout">
-        <section class="player-card">
-          <div class="player-top">
-            <div>
-              <p class="section-label">正在播放</p>
-              <h2 id="track-title">准备加载</h2>
-              <p id="track-artist" class="muted">
-                请将原唱放入 audio/originals，将翻唱放入 audio/covers
-              </p>
-            </div>
-            <button id="theme-glow" class="ghost-chip" type="button">双版本配对</button>
-          </div>
-
-          <div class="art-panel">
-            <div class="record">
-              <div class="record-inner"></div>
-            </div>
-            <div class="art-copy">
-              <p id="track-album" class="album-text">同名文件会自动配对</p>
-              <div class="visualizer" aria-hidden="true">
-                <span></span>
-                <span></span>
-                <span></span>
-                <span></span>
-                <span></span>
-              </div>
-            </div>
-          </div>
-
-          <div class="timeline">
-            <label class="sr-only" for="seek-bar">播放进度</label>
-            <input id="seek-bar" type="range" min="0" max="100" value="0" />
-            <div class="time-row">
-              <span id="current-time">0:00</span>
-              <span id="total-time">0:00</span>
-            </div>
-          </div>
-
-          <div class="controls">
-            <button id="shuffle-button" class="ghost-button" type="button" aria-pressed="false">
-              随机
-            </button>
-            <button id="prev-button" class="round-button" type="button" aria-label="上一首">
-              &#9664;
-            </button>
-            <button id="play-button" class="play-button" type="button" aria-label="播放">
-              播放
-            </button>
-            <button id="next-button" class="round-button" type="button" aria-label="下一首">
-              &#9654;
-            </button>
-            <button id="repeat-button" class="ghost-button" type="button" aria-pressed="false">
-              单曲循环
-            </button>
-          </div>
-
-          <div class="utility-row">
-            <label class="volume-wrap" for="volume-bar">
-              <span>音量</span>
-              <input id="volume-bar" type="range" min="0" max="1" step="0.01" value="0.8" />
-            </label>
-            <button id="autoplay-button" class="ghost-chip" type="button" aria-pressed="false">
-              自动切歌：关
-            </button>
-          </div>
-        </section>
-
-        <aside class="playlist-card">
-          <div class="playlist-head">
-            <div>
-              <p class="section-label">配对歌单</p>
-              <h2>原唱 / 翻唱</h2>
-            </div>
-            <span id="track-count" class="count-chip">0 组</span>
-          </div>
-          <p id="playlist-source" class="muted source-note">正在等待音频来源。</p>
-          <div class="pair-grid-head" aria-hidden="true">
-            <span>歌曲</span>
-            <span>原唱</span>
-            <span>翻唱</span>
-          </div>
-          <div id="playlist-empty" class="empty-state" hidden>
-            <p>没有找到可播放的配对歌曲。</p>
-            <p>
-              请把原唱放到 <code>audio/originals/</code>，把翻唱放到
-              <code>audio/covers/</code>。同一首歌请使用相同的文件名，站点部署后会自动把它们配对。
-            </p>
-          </div>
-          <ol id="playlist" class="pair-list" aria-label="原唱与翻唱配对列表"></ol>
-        </aside>
-      </main>
-
-      <section class="lyrics-card" aria-labelledby="lyrics-title">
-        <div class="lyrics-head">
-          <div>
-            <p class="section-label">歌词组件</p>
-            <h2 id="lyrics-title">歌词</h2>
-          </div>
-          <div class="lyrics-actions">
-            <button id="lyrics-follow-button" class="ghost-chip" type="button">
-              跳到当前歌词
-            </button>
-            <span id="lyrics-status" class="count-chip">正在加载歌词目录</span>
-          </div>
-        </div>
-
-        <div class="lyrics-layout">
-          <section class="lyrics-display" aria-labelledby="lyrics-display-title">
-            <div class="lyrics-display-head">
-              <p class="section-label" id="lyrics-display-title">歌词显示器</p>
-              <span id="lyrics-display-title-text" class="ghost-chip">未选择歌词</span>
-            </div>
-            <div id="lyrics-display-text" class="lyrics-text-view" aria-live="polite">
-              <p class="lyrics-paragraph is-placeholder">左侧会显示 TXT 歌词的完整文本。</p>
-              <p class="lyrics-paragraph is-placeholder">
-                请从右侧歌词单选择歌词，或点击“跳到当前歌词”快速定位。
-              </p>
-            </div>
-          </section>
-
-          <aside class="lyrics-sheet" aria-labelledby="lyrics-sheet-title">
-            <div class="lyrics-sheet-head">
-              <p class="section-label" id="lyrics-sheet-title">歌词单</p>
-              <span id="lyrics-count" class="ghost-chip">0 份</span>
-            </div>
-            <ol id="lyrics-list" class="lyrics-list" aria-label="歌词目录">
-              <li class="lyrics-directory-empty">正在等待歌词目录</li>
-            </ol>
-          </aside>
-        </div>
-      </section>
-    </div>
-
-    <audio id="audio-player" preload="metadata"></audio>
-    <script src="./script.js" defer></script>
-  </body>
+        <audio id="audio-player" preload="metadata"></audio>
+        <script src="./script.js" defer></script>
+    </body>
 </html>

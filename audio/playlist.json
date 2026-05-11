@@ -17,6 +17,24 @@
                                     "src":  "./audio/covers/%E6%B3%A1%E6%B2%AB.mp3",
                                     "duration":  ""
                                 }
+                  },
+                  {
+                      "key":  "不怕",
+                      "title":  "不怕",
+                      "original":  {
+                                       "title":  "不怕",
+                                       "artist":  "Original",
+                                       "album":  "My Music",
+                                       "src":  "./audio/originals/%E4%B8%8D%E6%80%95.mp3",
+                                       "duration":  ""
+                                   },
+                      "cover":  {
+                                    "title":  "不怕",
+                                    "artist":  "Cover",
+                                    "album":  "My Music",
+                                    "src":  "./audio/covers/%E4%B8%8D%E6%80%95.mp3",
+                                    "duration":  ""
+                                }
                   }
               ]
 }
